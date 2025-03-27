@@ -71,14 +71,14 @@ pub struct TransferProduct<'info> {
 
     #[account(
         mut,
-        seeds = [b"product", product_id.as_ref()],
+        seeds = [b"product", product_id.as_bytes()],
         bump,
         constraint = product_account.current_owner == current_owner.key() @ HakikishaError::Unauthorised
     )]
     pub product_account: Account<'info, Product>,
 
     #[account(
-        seeds = [b"reatiler", new_owner_wallet.as_ref()],
+        seeds = [b"retailer", new_owner_wallet.as_ref()],
         bump,
         constraint = new_owner_account.is_verified @ HakikishaError::Unauthorised
     )]
