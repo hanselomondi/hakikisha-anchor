@@ -76,4 +76,46 @@ describe("hakikisha", () => {
     expect(retailerAccount.isVerified).to.equal(true);
   });
 
+  // 3. Manufacturer Flow: Register product
+  it("allows a manufacturer to register a product", async () => {
+    const productId = "vodka_batch_001";
+    const [productPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("product"), Buffer.from(productId)],
+      program.programId
+    );
+
+    const [manufacturerAccountPda] = await PublicKey.findProgramAddressSync(
+      [Buffer.from("manufacturer"), manufacturerKp.publicKey.toBuffer()],
+      program.programId
+    );
+
+    await program.methods
+    .registerProduct(
+      productId,
+      new anchor.BN(100),  // batch number
+      new anchor.BN(1711497600), // production date
+      "Premium Vodka",
+      "750ml bottle of premium vodka"
+    )
+    .accounts({
+      manufacturer: manufacturerKp.publicKey,  // Manufacturer signs transaction using the wallet they registered with
+      product: productPda,
+      manufacturerAccount: manufacturerAccountPda,
+      systemProgram: SystemProgram.programId,
+    })
+    .signers([manufacturerKp])
+    .rpc();
+
+    const productAccount = await program.account.product.fetch(productPda);
+    console.log(productAccount);
+    expect(productAccount.productId).to.equal(productId);
+    expect(productAccount.batchNumber.toNumber()).to.equal(100);
+    expect(productAccount.productionDate.toNumber()).to.equal(1711497600);
+    expect(productAccount.name).to.equal("Premium Vodka");
+    expect(productAccount.description).to.equal("750ml bottle of premium vodka");
+    expect(productAccount.manufacturer.toBase58()).to.equal(manufacturerKp.publicKey.toBase58());
+    expect(productAccount.currentOwner.toBase58()).to.equal(manufacturerKp.publicKey.toBase58());
+    expect(productAccount.status).to.have.property('unsold');
+  });
+
 });
