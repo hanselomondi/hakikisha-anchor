@@ -175,4 +175,26 @@ describe("hakikisha", () => {
     expect(productAccount.status).to.have.property('sold');
   });
 
+  // 6. Consumer Flow: Report Counterfeit Product
+  it("allows consumer to report a counterfeit product", async () => {
+    const productId = "vodka_batch_001";
+    const [productPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("product"), Buffer.from(productId)],
+      program.programId
+    );
+
+    await program.methods
+    .reportCounterfeit(productId)
+    .accounts({
+      reporter: consumerKp.publicKey,
+      product: productPda
+    })
+    .signers([consumerKp])
+    .rpc();
+
+    const productAccount = await program.account.product.fetch(productPda);
+    console.log(productAccount);
+    expect(productAccount.isReported).to.equal(true);
+  });
+
 });
