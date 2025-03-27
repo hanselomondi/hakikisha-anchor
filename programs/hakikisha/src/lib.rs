@@ -1,9 +1,9 @@
 #![allow(unexpected_cfgs)]
 use anchor_lang::prelude::*;
 
-declare_id!("DcwAxf5Tv7vGcecbnHM7QeeRAdy2nAjts7deAcbKnbHf");
+declare_id!("3bpsmdk6AE4foSTDLGpxNjb5eaYaVUaWLizyC9zouRAv");
 
-pub const ADMIN_PUBKEY: Pubkey = pubkey!("F3h2Kz7e1j8sM9A6q4L5X7Y2B3D9E5G7F2KJ3H4A9L6M");
+pub const ADMIN_PUBKEY: Pubkey = pubkey!("B6XW8VUBXiiSWr5h7xSJacefFmsdX7nwqf9E28zK4FeY");
 
 mod hakikisha_accounts;
 mod instructions;

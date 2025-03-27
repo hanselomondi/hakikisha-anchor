@@ -5,7 +5,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-hakikisha = "DcwAxf5Tv7vGcecbnHM7QeeRAdy2nAjts7deAcbKnbHf"
+hakikisha = "3bpsmdk6AE4foSTDLGpxNjb5eaYaVUaWLizyC9zouRAv"
 
 [registry]
 url = "https://api.apr.dev"
