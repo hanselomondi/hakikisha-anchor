@@ -147,4 +147,32 @@ describe("hakikisha", () => {
     expect(productAccount.currentOwner.toBase58()).to.equal(retailerKp.publicKey.toBase58());
   });
 
+  // 5. Retailer Flow: Mark Product as Sold when Sold to Consumer
+  it("allows retailer to mark product as sold", async () => {
+    const productId = "vodka_batch_001";
+    const [productPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("product"), Buffer.from(productId)],
+      program.programId
+    );
+
+    const retailerPda = await PublicKey.findProgramAddressSync(
+      [Buffer.from("retailer"), retailerKp.publicKey.toBuffer()],
+      program.programId
+    );
+
+    await program.methods
+    .markAsSold(productId)
+    .accounts({
+      retailer: retailerKp.publicKey,
+      productAccount: productPda,
+      retailerAccount: retailerPda
+    })
+    .signers([retailerKp])
+    .rpc();
+
+    const productAccount = await program.account.product.fetch(productPda);
+    console.log(productAccount);
+    expect(productAccount.status).to.have.property('sold');
+  });
+
 });
