@@ -197,4 +197,21 @@ describe("hakikisha", () => {
     expect(productAccount.isReported).to.equal(true);
   });
 
+  // 7. Verification Flow: Verify Product (Read-Only)
+  it("can retrieve product details to verify authenticity", async () => {
+    const productId = "vodka_batch_001";
+    const [productPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("product"), Buffer.from(productId)],
+      program.programId
+    );
+
+    const productAccount = await program.account.product.fetch(productPda);
+    console.log(productAccount);
+    expect(productAccount.productId).to.equal(productId);
+    expect(productAccount.currentOwner.toBase58()).to.equal(retailerKp.publicKey.toBase58());
+    expect(productAccount.manufacturer.toBase58()).to.equal(manufacturerKp.publicKey.toBase58());
+    expect(productAccount.status).to.have.property('sold');
+    expect(productAccount.isReported).to.equal(true);
+  });
+
 });
