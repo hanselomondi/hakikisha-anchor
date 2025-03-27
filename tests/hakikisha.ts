@@ -118,4 +118,33 @@ describe("hakikisha", () => {
     expect(productAccount.status).to.have.property('unsold');
   });
 
+  // 4. Manufacturer Flow: Transfer product to retailer
+  it("allows manufacturer to transfer product to retailer", async () => {
+    const productId = "vodka_batch_001";
+    const [productPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("product"), Buffer.from(productId)],
+      program.programId
+    );
+
+    const [retailerPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("retailer"), retailerKp.publicKey.toBuffer()],
+      program.programId
+    );
+    console.log(retailerPda.toBase58());
+
+    await program.methods
+    .transferProduct(productId, retailerKp.publicKey)
+    .accounts({
+      currentOwner: manufacturerKp.publicKey,  // Wallet address manufacturer registered with
+      productAccount: productPda,
+      newOwnerAccount: retailerPda
+    })
+    .signers([manufacturerKp])
+    .rpc();
+
+    const productAccount = await program.account.product.fetch(productPda);
+    console.log(productAccount);
+    expect(productAccount.currentOwner.toBase58()).to.equal(retailerKp.publicKey.toBase58());
+  });
+
 });
