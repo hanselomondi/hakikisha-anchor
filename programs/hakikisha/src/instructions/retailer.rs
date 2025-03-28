@@ -33,7 +33,7 @@ pub fn mark_as_sold(
 
     let product = &mut ctx.accounts.product_account;
     // Ensure the product is not already sold since products can only be sold once
-    require!(product.status == ProductStatus::Unsold, HakikishaError::InvalidProductStatus);
+    require!(product.status == ProductStatus::Unsold, HakikishaError::ProductAlreadySold);
     product.status = ProductStatus::Sold;
 
     msg!("Product marked as sold");

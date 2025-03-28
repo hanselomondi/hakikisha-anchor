@@ -13,6 +13,6 @@ pub enum HakikishaError {
     Unauthorised,
     #[msg("String exceeds maximum length")]
     StringTooLong,
-    #[msg("Invalid product status")]
-    InvalidProductStatus
+    #[msg("Product already marked as sold")]
+    ProductAlreadySold
 }
