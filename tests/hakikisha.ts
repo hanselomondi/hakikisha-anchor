@@ -16,12 +16,12 @@ describe("hakikisha", () => {
   let consumerKp = Keypair.generate();
   let unauthorizedKp = Keypair.generate();
 
-  beforeEach(async () => {
-    const fundWallet = async (publicKey: PublicKey, amount: number) => {
-      const tx = await program.provider.connection.requestAirdrop(publicKey, amount);
-      await program.provider.connection.confirmTransaction(tx);
-    };
+  const fundWallet = async (publicKey: PublicKey, amount: number) => {
+    const tx = await program.provider.connection.requestAirdrop(publicKey, amount);
+    await program.provider.connection.confirmTransaction(tx);
+  };
 
+  beforeEach(async () => {
     await fundWallet(manufacturerKp.publicKey, 2_000_000_000);
     await fundWallet(retailerKp.publicKey, 2_000_000_000);
     await fundWallet(consumerKp.publicKey, 2_000_000_000);
@@ -248,7 +248,7 @@ describe("hakikisha", () => {
   });
 
   // 2. Edge Case: Duplicate Manufacturer Registration
-  it("fails when manufacturer with duplicate wallet address", async () => {
+  it("fails when manufacturer registers with duplicate wallet address", async () => {
     const manufacturer1 = Keypair.generate();
     const [manufacturerPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("manufacturer"), manufacturer1.publicKey.toBuffer()],
@@ -285,10 +285,11 @@ describe("hakikisha", () => {
     }
   });
 
-  // 3. Edge Case: String Length Limits
+  /// 3. Edge Case: String Length Limits
   it("fails when name exceeds max length", async () => {
+    const tempManufacturerKp = Keypair.generate();
     const [manufacturerPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("manufacturer"), manufacturerKp.publicKey.toBuffer()],
+      [Buffer.from("manufacturer"), tempManufacturerKp.publicKey.toBuffer()],
       program.programId
     );
 
@@ -299,7 +300,7 @@ describe("hakikisha", () => {
       .accounts({
         admin: program.provider.publicKey,
         manufacturer: manufacturerPda,
-        manufacturerWallet: manufacturerKp.publicKey,
+        manufacturerWallet: tempManufacturerKp.publicKey,
         systemProgram: SystemProgram.programId,
       })
       .signers([program.provider.wallet.payer])
@@ -349,13 +350,19 @@ describe("hakikisha", () => {
   });
 
   async function setupManufacturerAndRetailer() {
+    const mWallet = Keypair.generate();
+    const rWallet = Keypair.generate();
+
+    await fundWallet(mWallet.publicKey, 1_000_000_000);
+    await fundWallet(rWallet.publicKey, 1_000_000_000);
+
     const [manufacturerPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("manufacturer"), manufacturerKp.publicKey.toBuffer()],
+      [Buffer.from("manufacturer"), mWallet.publicKey.toBuffer()],
       program.programId
     );
 
     const [retailerPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("retailer"), retailerKp.publicKey.toBuffer()],
+      [Buffer.from("retailer"), rWallet.publicKey.toBuffer()],
       program.programId
     );
 
@@ -364,7 +371,7 @@ describe("hakikisha", () => {
     .accounts({
       admin: program.provider.publicKey,
       manufacturer: manufacturerPda,
-      manufacturerWallet: manufacturerKp.publicKey,
+      manufacturerWallet: mWallet.publicKey,
       systemProgram: SystemProgram.programId,
     })
     .signers([program.provider.wallet.payer])
@@ -375,19 +382,19 @@ describe("hakikisha", () => {
     .accounts({
       admin: program.provider.publicKey,
       retailer: retailerPda,
-      retailerWallet: retailerKp.publicKey,
+      retailerWallet: rWallet.publicKey,
       systemProgram: SystemProgram.programId,
     })
     .signers([program.provider.wallet.payer])
     .rpc();
 
-    return { manufacturerPda, retailerPda };
+    return { mWallet, rWallet, manufacturerPda, retailerPda };
   }
 
-  // 5. Edge Case: Product Transfer by Non-Owner
+  /// 5. Edge Case: Product Transfer by Non-Owner
   it("fails when non-owner attempts to transfer product", async () => {
-    const { manufacturerPda, retailerPda } = await setupManufacturerAndRetailer();
-    const productId = "vodka_batch_001";
+    const { mWallet, manufacturerPda, retailerPda } = await setupManufacturerAndRetailer();
+    const productId = "non_owner_transfer";
     const [productPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("product"), Buffer.from(productId)],
       program.programId
@@ -402,12 +409,12 @@ describe("hakikisha", () => {
       "750ml bottle of premium vodka"
     )
     .accounts({
-      manufacturer: manufacturerKp.publicKey,
+      manufacturer: mWallet.publicKey,
       product: productPda,
       manufacturerAccount: manufacturerPda,
       systemProgram: SystemProgram.programId,
     })
-    .signers([manufacturerKp])
+    .signers([mWallet])
     .rpc();
 
     try {
@@ -427,10 +434,10 @@ describe("hakikisha", () => {
     }
   });
 
-  // 6. Edge Case: Transfer Product to Unregistered Retailer
+  /// 6. Edge Case: Transfer Product to Unregistered Retailer
   it("fails when transferring product to unregistered retailer", async () => {
-    const { manufacturerPda } = await setupManufacturerAndRetailer();
-    const productId = "vodka_batch_001";
+    const { mWallet, manufacturerPda } = await setupManufacturerAndRetailer();
+    const productId = "unregistered_retailer";
     const [productPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("product"), Buffer.from(productId)],
       program.programId
@@ -449,23 +456,23 @@ describe("hakikisha", () => {
       "750ml bottle of premium vodka"
     )
     .accounts({
-      manufacturer: manufacturerKp.publicKey,
+      manufacturer: mWallet.publicKey,
       product: productPda,
       manufacturerAccount: manufacturerPda,
       systemProgram: SystemProgram.programId,
     })
-    .signers([manufacturerKp])
+    .signers([mWallet])
     .rpc();
 
     try {
       await program.methods
       .transferProduct(productId, unauthorizedKp.publicKey)
       .accounts({
-        currentOwner: manufacturerKp.publicKey,
+        currentOwner: mWallet.publicKey,
         productAccount: productPda,
         newOwnerAccount: unregisteredPda
       })
-      .signers([manufacturerKp])
+      .signers([mWallet])
       .rpc();
       expect.fail("Should have failed with unregistered retailer error");
     } catch (err) {
@@ -474,10 +481,10 @@ describe("hakikisha", () => {
     }
   });
 
-  // 7. Edge Case: Mark as Sold by Non-Owner
+  /// 7. Edge Case: Mark as Sold by Non-Owner
   it("fails when non-owner attempts to mark product as sold", async () => {
-    const { manufacturerPda, retailerPda } = await setupManufacturerAndRetailer();
-    const productId = "vodka_batch_001";
+    const { mWallet, rWallet, manufacturerPda, retailerPda } = await setupManufacturerAndRetailer();
+    const productId = "non_owner_mark_sold";
     const [productPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("product"), Buffer.from(productId)],
       program.programId
@@ -492,23 +499,23 @@ describe("hakikisha", () => {
       "750ml bottle of premium vodka"
     )
     .accounts({
-      manufacturer: manufacturerKp.publicKey,
+      manufacturer: mWallet.publicKey,
       product: productPda,
       manufacturerAccount: manufacturerPda,
       systemProgram: SystemProgram.programId,
     })
-    .signers([manufacturerKp])
+    .signers([mWallet])
     .rpc();
 
     try {
       await program.methods
       .markAsSold(productId)
       .accounts({
-        retailer: retailerKp.publicKey,  // Hadn't yet had the product transfered to them by the manufacturer
+        retailer: rWallet.publicKey,  // Hadn't yet had the product transfered to them by the manufacturer
         productAccount: productPda,
         retailerAccount: retailerPda
       })
-      .signers([retailerKp])
+      .signers([rWallet])
       .rpc();
       expect.fail("Should have failed with unauthorised owner error");
     } catch (err) {
@@ -517,10 +524,10 @@ describe("hakikisha", () => {
     }
   });
 
-  // 8. Edge Case: Mark Already Sold Product as Sold Again
+  /// 8. Edge Case: Mark Already Sold Product as Sold Again
   it("fails when retailer attempts to mark already sold product as sold", async () => {
-    const { manufacturerPda, retailerPda } = await setupManufacturerAndRetailer();
-    const productId = "vodka_batch_001";
+    const { mWallet, rWallet, manufacturerPda, retailerPda } = await setupManufacturerAndRetailer();
+    const productId = "already_sold_product";
     const [productPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("product"), Buffer.from(productId)],
       program.programId
@@ -535,43 +542,43 @@ describe("hakikisha", () => {
       "750ml bottle of premium vodka"
     )
     .accounts({
-      manufacturer: manufacturerKp.publicKey,
+      manufacturer: mWallet.publicKey,
       product: productPda,
       manufacturerAccount: manufacturerPda,
       systemProgram: SystemProgram.programId,
     })
-    .signers([manufacturerKp])
+    .signers([mWallet])
     .rpc();
 
     await program.methods
-    .transferProduct(productId, retailerKp.publicKey)
+    .transferProduct(productId, rWallet.publicKey)
     .accounts({
-      currentOwner: manufacturerKp.publicKey,
+      currentOwner: mWallet.publicKey,
       productAccount: productPda,
       newOwnerAccount: retailerPda
     })
-    .signers([manufacturerKp])
+    .signers([mWallet])
     .rpc();
 
     await program.methods
     .markAsSold(productId)
     .accounts({
-      retailer: retailerKp.publicKey,
+      retailer: rWallet.publicKey,
       productAccount: productPda,
       retailerAccount: retailerPda
     })
-    .signers([retailerKp])
+    .signers([rWallet])
     .rpc();
 
     try {
       await program.methods
       .markAsSold(productId)  // Second attempt to mark the product as sold
       .accounts({
-        retailer: retailerKp.publicKey,
+        retailer: rWallet.publicKey,
         productAccount: productPda,
         retailerAccount: retailerPda
       })
-      .signers([retailerKp])
+      .signers([rWallet])
       .rpc();
       expect.fail("Should have failed with already sold error");
     } catch (err) {
@@ -580,7 +587,7 @@ describe("hakikisha", () => {
     }
   });
 
-  it.only("fails when reporting consumer attempts to report non-existent product", async () => {
+  it("fails when consumer attempts to report non-existent product", async () => {
     const productId = "non_existent_product";
     const [productPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("product"), Buffer.from(productId)],
