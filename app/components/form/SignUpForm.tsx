@@ -14,6 +14,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 const FormSchema = z
   .object({
@@ -31,6 +33,7 @@ const FormSchema = z
   });
 
 const SignUpForm = () => {
+  const router = useRouter();
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
@@ -41,8 +44,25 @@ const SignUpForm = () => {
     },
   });
 
-  const onSubmit = (values: z.infer<typeof FormSchema>) => {
-    console.log(values);
+  const onSubmit = async (values: z.infer<typeof FormSchema>) => {
+    const response = await fetch("/api/user", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        username: values.username,
+        email: values.email,
+        password: values.password
+      })
+    })
+
+    if (response.ok) {
+      router.push('/sign-in');
+    } else {
+      const error = await response.json();
+      toast(error.message);
+    }
   };
 
   return (
@@ -97,10 +117,10 @@ const SignUpForm = () => {
             name='confirmPassword'
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Re-Enter your password</FormLabel>
+                <FormLabel>Confirm your password</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder='Re-Enter your password'
+                    placeholder='Confirm your password'
                     type='password'
                     {...field}
                   />
