@@ -11,14 +11,17 @@ const userSchema = z
         password: z
             .string()
             .min(1, 'Password is required')
-            .min(8, 'Password must have than 8 characters')
+            .min(8, 'Password must have than 8 characters'),
+        role: z.enum(['manufacturer', 'retailer'], {
+            required_error: 'Role is required',
+        }),
     })
 
 
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { username, email, password } = userSchema.parse(body);
+        const { username, email, password, role } = userSchema.parse(body);
 
         // Check if the user already exists
         const existingUserByEmail = await db.user.findUnique({
@@ -48,6 +51,7 @@ export async function POST(req: Request) {
                 username,
                 email,
                 password: hashedPassword,
+                role
             },
         });
         // Remove the password from the response

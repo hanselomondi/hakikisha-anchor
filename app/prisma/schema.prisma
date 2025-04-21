@@ -14,10 +14,56 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
+  id                  String               @id @default(uuid())
+  email               String               @unique
+  username            String               @unique
+  password            String
+  role                Role                 @default(retailer)
+  walletAddress       String?
+  businessName        String?
+  licenseNumber       String?
+  documentUrl         String?
+  verificationStatus  VerificationStatus   @default(pending)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  pendingRegistration PendingRegistration?
+}
+
+model PendingRegistration {
+  id            Int                @id @default(autoincrement())
+  userId        String             @unique
+  role          Role
+  businessName  String
+  licenseNumber String
+  walletAddress String
+  documentUrl   String
+  status        RegistrationStatus @default(pending)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  user          User               @relation(fields: [userId], references: [id])
+}
+
+model Admin {
+  id        String   @id @default(uuid())
   email     String   @unique
-  username  String   @unique
   password  String
   createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  manufacturer
+  retailer
+}
+
+enum VerificationStatus {
+  pending
+  approved
+  rejected
+}
+
+enum RegistrationStatus {
+  pending
+  approved
+  rejected
 }

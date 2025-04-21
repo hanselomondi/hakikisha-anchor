@@ -1,0 +1,609 @@
+{
+    "address": "3bpsmdk6AE4foSTDLGpxNjb5eaYaVUaWLizyC9zouRAv",
+    "metadata": {
+      "name": "hakikisha",
+      "version": "0.1.0",
+      "spec": "0.1.0",
+      "description": "Created with Anchor"
+    },
+    "instructions": [
+      {
+        "name": "mark_as_sold",
+        "discriminator": [
+          161,
+          162,
+          111,
+          5,
+          143,
+          63,
+          238,
+          39
+        ],
+        "accounts": [
+          {
+            "name": "retailer",
+            "writable": true,
+            "signer": true
+          },
+          {
+            "name": "product_account",
+            "writable": true,
+            "pda": {
+              "seeds": [
+                {
+                  "kind": "const",
+                  "value": [
+                    112,
+                    114,
+                    111,
+                    100,
+                    117,
+                    99,
+                    116
+                  ]
+                },
+                {
+                  "kind": "arg",
+                  "path": "product_id"
+                }
+              ]
+            }
+          },
+          {
+            "name": "retailer_account",
+            "pda": {
+              "seeds": [
+                {
+                  "kind": "const",
+                  "value": [
+                    114,
+                    101,
+                    116,
+                    97,
+                    105,
+                    108,
+                    101,
+                    114
+                  ]
+                },
+                {
+                  "kind": "account",
+                  "path": "retailer"
+                }
+              ]
+            }
+          }
+        ],
+        "args": [
+          {
+            "name": "product_id",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "name": "register_manufacturer",
+        "discriminator": [
+          209,
+          17,
+          71,
+          213,
+          190,
+          230,
+          125,
+          136
+        ],
+        "accounts": [
+          {
+            "name": "admin",
+            "writable": true,
+            "signer": true
+          },
+          {
+            "name": "manufacturer",
+            "writable": true,
+            "pda": {
+              "seeds": [
+                {
+                  "kind": "const",
+                  "value": [
+                    109,
+                    97,
+                    110,
+                    117,
+                    102,
+                    97,
+                    99,
+                    116,
+                    117,
+                    114,
+                    101,
+                    114
+                  ]
+                },
+                {
+                  "kind": "account",
+                  "path": "manufacturer_wallet"
+                }
+              ]
+            }
+          },
+          {
+            "name": "manufacturer_wallet"
+          },
+          {
+            "name": "system_program",
+            "address": "11111111111111111111111111111111"
+          }
+        ],
+        "args": [
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "license_number",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "name": "register_product",
+        "discriminator": [
+          224,
+          97,
+          195,
+          220,
+          124,
+          218,
+          78,
+          43
+        ],
+        "accounts": [
+          {
+            "name": "manufacturer",
+            "writable": true,
+            "signer": true
+          },
+          {
+            "name": "product",
+            "writable": true,
+            "pda": {
+              "seeds": [
+                {
+                  "kind": "const",
+                  "value": [
+                    112,
+                    114,
+                    111,
+                    100,
+                    117,
+                    99,
+                    116
+                  ]
+                },
+                {
+                  "kind": "arg",
+                  "path": "product_id"
+                }
+              ]
+            }
+          },
+          {
+            "name": "manufacturer_account",
+            "pda": {
+              "seeds": [
+                {
+                  "kind": "const",
+                  "value": [
+                    109,
+                    97,
+                    110,
+                    117,
+                    102,
+                    97,
+                    99,
+                    116,
+                    117,
+                    114,
+                    101,
+                    114
+                  ]
+                },
+                {
+                  "kind": "account",
+                  "path": "manufacturer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "system_program",
+            "address": "11111111111111111111111111111111"
+          }
+        ],
+        "args": [
+          {
+            "name": "product_id",
+            "type": "string"
+          },
+          {
+            "name": "batch_number",
+            "type": "u64"
+          },
+          {
+            "name": "production_date",
+            "type": "u64"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "description",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "name": "register_retailer",
+        "discriminator": [
+          253,
+          14,
+          134,
+          25,
+          205,
+          89,
+          187,
+          176
+        ],
+        "accounts": [
+          {
+            "name": "admin",
+            "writable": true,
+            "signer": true
+          },
+          {
+            "name": "retailer",
+            "writable": true,
+            "pda": {
+              "seeds": [
+                {
+                  "kind": "const",
+                  "value": [
+                    114,
+                    101,
+                    116,
+                    97,
+                    105,
+                    108,
+                    101,
+                    114
+                  ]
+                },
+                {
+                  "kind": "account",
+                  "path": "retailer_wallet"
+                }
+              ]
+            }
+          },
+          {
+            "name": "retailer_wallet"
+          },
+          {
+            "name": "system_program",
+            "address": "11111111111111111111111111111111"
+          }
+        ],
+        "args": [
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "license_number",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "name": "report_counterfeit",
+        "discriminator": [
+          227,
+          169,
+          21,
+          169,
+          94,
+          155,
+          115,
+          54
+        ],
+        "accounts": [
+          {
+            "name": "reporter",
+            "writable": true,
+            "signer": true
+          },
+          {
+            "name": "product",
+            "writable": true,
+            "pda": {
+              "seeds": [
+                {
+                  "kind": "const",
+                  "value": [
+                    112,
+                    114,
+                    111,
+                    100,
+                    117,
+                    99,
+                    116
+                  ]
+                },
+                {
+                  "kind": "arg",
+                  "path": "product_id"
+                }
+              ]
+            }
+          }
+        ],
+        "args": [
+          {
+            "name": "product_id",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "name": "transfer_product",
+        "discriminator": [
+          119,
+          27,
+          86,
+          205,
+          209,
+          123,
+          162,
+          244
+        ],
+        "accounts": [
+          {
+            "name": "current_owner",
+            "writable": true,
+            "signer": true
+          },
+          {
+            "name": "product_account",
+            "writable": true,
+            "pda": {
+              "seeds": [
+                {
+                  "kind": "const",
+                  "value": [
+                    112,
+                    114,
+                    111,
+                    100,
+                    117,
+                    99,
+                    116
+                  ]
+                },
+                {
+                  "kind": "arg",
+                  "path": "product_id"
+                }
+              ]
+            }
+          },
+          {
+            "name": "new_owner_account",
+            "pda": {
+              "seeds": [
+                {
+                  "kind": "const",
+                  "value": [
+                    114,
+                    101,
+                    116,
+                    97,
+                    105,
+                    108,
+                    101,
+                    114
+                  ]
+                },
+                {
+                  "kind": "arg",
+                  "path": "new_owner_wallet"
+                }
+              ]
+            }
+          }
+        ],
+        "args": [
+          {
+            "name": "product_id",
+            "type": "string"
+          },
+          {
+            "name": "new_owner_address",
+            "type": "pubkey"
+          }
+        ]
+      }
+    ],
+    "accounts": [
+      {
+        "name": "Manufacturer",
+        "discriminator": [
+          105,
+          43,
+          161,
+          64,
+          242,
+          185,
+          127,
+          245
+        ]
+      },
+      {
+        "name": "Product",
+        "discriminator": [
+          102,
+          76,
+          55,
+          251,
+          38,
+          73,
+          224,
+          229
+        ]
+      },
+      {
+        "name": "Retailer",
+        "discriminator": [
+          194,
+          215,
+          198,
+          69,
+          112,
+          0,
+          156,
+          243
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "code": 6000,
+        "name": "Unauthorised",
+        "msg": "Unauthorised access"
+      },
+      {
+        "code": 6001,
+        "name": "StringTooLong",
+        "msg": "String exceeds maximum length"
+      },
+      {
+        "code": 6002,
+        "name": "ProductAlreadySold",
+        "msg": "Product already marked as sold"
+      }
+    ],
+    "types": [
+      {
+        "name": "Manufacturer",
+        "type": {
+          "kind": "struct",
+          "fields": [
+            {
+              "name": "wallet_address",
+              "type": "pubkey"
+            },
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "license_number",
+              "type": "string"
+            },
+            {
+              "name": "is_verified",
+              "type": "bool"
+            }
+          ]
+        }
+      },
+      {
+        "name": "Product",
+        "type": {
+          "kind": "struct",
+          "fields": [
+            {
+              "name": "product_id",
+              "type": "string"
+            },
+            {
+              "name": "manufacturer",
+              "type": "pubkey"
+            },
+            {
+              "name": "current_owner",
+              "type": "pubkey"
+            },
+            {
+              "name": "status",
+              "type": {
+                "defined": {
+                  "name": "ProductStatus"
+                }
+              }
+            },
+            {
+              "name": "production_date",
+              "type": "u64"
+            },
+            {
+              "name": "batch_number",
+              "type": "u64"
+            },
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "description",
+              "type": "string"
+            },
+            {
+              "name": "is_reported",
+              "type": "bool"
+            }
+          ]
+        }
+      },
+      {
+        "name": "ProductStatus",
+        "type": {
+          "kind": "enum",
+          "variants": [
+            {
+              "name": "Unsold"
+            },
+            {
+              "name": "Sold"
+            }
+          ]
+        }
+      },
+      {
+        "name": "Retailer",
+        "type": {
+          "kind": "struct",
+          "fields": [
+            {
+              "name": "wallet_address",
+              "type": "pubkey"
+            },
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "license_number",
+              "type": "string"
+            },
+            {
+              "name": "is_verified",
+              "type": "bool"
+            }
+          ]
+        }
+      }
+    ]
+  }
