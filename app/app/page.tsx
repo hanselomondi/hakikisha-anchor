@@ -1,6 +1,7 @@
 import Link from "next/link"
-import { ArrowRight, Shield, Wallet } from "lucide-react"
+import { ArrowRight, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import WalletButtonClient from "@/components/WalletMultiButton"
 
 export default function Home() {
   return (
@@ -33,10 +34,7 @@ export default function Home() {
               Admin
             </Link>
           </nav>
-          <Button className="hidden md:flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 transition-all">
-            <Wallet className="h-4 w-4" />
-            Connect Wallet
-          </Button>
+          <WalletButtonClient />
           <Button variant="ghost" size="icon" className="md:hidden">
             <svg
               xmlns="http://www.w3.org/2000/svg"
