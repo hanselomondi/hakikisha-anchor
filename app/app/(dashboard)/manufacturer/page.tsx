@@ -22,6 +22,10 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { signOut } from "next-auth/react"
+import dynamic from "next/dynamic";
+import UserNavBar from "@/components/UserNavBar"
+const WalletButtonClient = dynamic(() => import("@/components/WalletMultiButton"), { ssr: false });
+
 
 // Mock data for products
 const mockProducts = [
@@ -118,29 +122,7 @@ export default function ManufacturerDashboard() {
     return (
       <div className="flex min-h-screen flex-col">
         {/* Navbar */}
-        <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-sm">
-          <div className="container flex h-16 items-center justify-between px-5">
-            <Link href="/" className="flex items-center gap-2">
-              <Shield className="h-6 w-6 text-indigo-600" />
-              <span className="text-xl font-bold text-indigo-700">Hakikisha</span>
-            </Link>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Wallet className="h-4 w-4" />
-                <span>8Kvj...F3pZ</span>
-              </div>
-              <Button variant="ghost" size="sm">
-                Disconnect
-              </Button>
-              <Button onClick={() => signOut({
-                redirect: true,
-                callbackUrl: `${window.location.origin}/sign-in`
-              })} variant='destructive'>
-                Sign Out
-              </Button>
-            </div>
-          </div>
-        </header>
+        <UserNavBar />
 
         <main className="flex-1 bg-gray-50 p-4">
           <div className="container max-w-4xl py-8">

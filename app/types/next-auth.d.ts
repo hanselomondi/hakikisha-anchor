@@ -2,17 +2,36 @@ import NextAuth from "next-auth";
 
 declare module "next-auth" {
     interface User {
-        username: string;
-        role: string;
+        id: string;
+        email: string;
+        // Admin-specific field
+        isAdmin?: boolean;
+        // User-specific fields
+        role?: string;
+        walletAddress?: string;
     }
 
     interface Session {
-        user: User & {
-            username: string;
-            role: string;
-        }
-        token: {
-            username: string;
-        }
+        user: {
+            id: string;
+            email: string;
+            // Admin-specific field
+            isAdmin?: boolean;
+            // User-specific fields
+            role?: string;
+            walletAddress?: string;
+        };
+    }
+}
+
+declare module "next-auth/jwt" {
+    interface JWT {
+        id: string;
+        email: string;
+        // Admin-specific field
+        isAdmin?: boolean;
+        // User-specific fields
+        role?: string;
+        walletAddress?: string;
     }
 }

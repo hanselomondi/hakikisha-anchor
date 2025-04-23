@@ -3,7 +3,7 @@ import { db } from "../lib/db";
 import { hash } from "bcrypt";
 import dotenv from "dotenv";
 
-dotenv.config({ path: ".env.local" });
+dotenv.config();
 
 async function main() {
   const adminPassword = await hash(process.env.ADMIN_PASSWORD!, 10); // Replace with secure password
@@ -18,3 +18,5 @@ async function main() {
 }
 
 main().catch((e) => console.error(e)).finally(async () => await db.$disconnect());
+
+// run as npx tsx prisma/seed.ts

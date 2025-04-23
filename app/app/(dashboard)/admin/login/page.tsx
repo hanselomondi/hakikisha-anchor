@@ -11,12 +11,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "sonner"
+import { signIn } from "next-auth/react"
 
 export default function AdminLogin() {
     const router = useRouter()
     const [isLoading, setIsLoading] = useState(false)
     const [credentials, setCredentials] = useState({
-        username: "",
+        email: "",
         password: "",
     })
 
@@ -33,17 +34,17 @@ export default function AdminLogin() {
         setIsLoading(true)
 
         try {
-            // In a real application, you would make an API call to verify admin credentials
-            // For demo purposes, we'll simulate a successful login with hardcoded credentials
-            if (credentials.username === "admin" && credentials.password === "admin123") {
-                // Set admin session cookie or token
-                // This would typically be handled by a secure authentication mechanism
-                localStorage.setItem("adminAuth", "true")
+            const result = await signIn("admin-credentials", {
+                redirect: false,
+                email: credentials.email,
+                password: credentials.password,
+            })
 
-                toast.success("Admin login successful")
-                router.push("/admin/home")
+            if (result?.error) {
+                toast.error("Invalid credentials. Please try again.")
             } else {
-                toast.error("Invalid admin credentials")
+                toast.success("Admin login successful!")
+                router.push("/admin/home")
             }
         } catch (error) {
             console.error("Login error:", error)
@@ -77,12 +78,13 @@ export default function AdminLogin() {
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="username">Username</Label>
+                            <Label htmlFor="username">Email</Label>
                             <Input
-                                id="username"
-                                name="username"
-                                placeholder="Enter admin username"
-                                value={credentials.username}
+                                id="email"
+                                name="email"
+                                type="email"
+                                placeholder="Enter admin email"
+                                value={credentials.email}
                                 onChange={handleChange}
                                 required
                                 className="border-gray-300 focus-visible:ring-indigo-600"

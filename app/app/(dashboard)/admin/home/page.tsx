@@ -31,139 +31,177 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
+import { signOut, useSession } from "next-auth/react"
 
-// Mock data for pending registrations
-const mockPendingRegistrations = [
-    {
-        id: "REG001",
-        businessName: "Highland Distillery",
-        email: "contact@highland.com",
-        role: "manufacturer",
-        licenseNumber: "MAN-2023-001",
-        submissionDate: "2023-11-15",
-        documentUrl: "/documents/license-001.pdf",
-    },
-    {
-        id: "REG002",
-        businessName: "City Liquor Store",
-        email: "info@cityliquor.com",
-        role: "retailer",
-        licenseNumber: "RET-2023-042",
-        submissionDate: "2023-11-18",
-        documentUrl: "/documents/license-002.pdf",
-    },
-    {
-        id: "REG003",
-        businessName: "Vineyard Spirits",
-        email: "support@vineyardspirits.com",
-        role: "manufacturer",
-        licenseNumber: "MAN-2023-089",
-        submissionDate: "2023-11-20",
-        documentUrl: "/documents/license-003.pdf",
-    },
-]
+// types based on Prisma schema
+interface PendingRegistration {
+    id: number
+    userId: string
+    role: "manufacturer" | "retailer"
+    businessName: string
+    licenseNumber: string
+    walletAddress: string
+    documentUrl: string
+    status: "pending" | "approved" | "rejected"
+    createdAt: string // ISO date string
+    updatedAt: string // ISO date string
+    user: {
+        email: string
+    }
+}
 
-// Mock data for approved accounts
-const mockApprovedAccounts = [
-    {
-        id: "ACC001",
-        businessName: "Acme Distillery",
-        email: "info@acmedistillery.com",
-        role: "manufacturer",
-        licenseNumber: "MAN-2023-001",
-        approvalDate: "2023-10-05",
-        walletAddress: "8Kvj...F3pZ",
-        status: "active",
-    },
-    {
-        id: "ACC002",
-        businessName: "Downtown Wines",
-        email: "contact@downtownwines.com",
-        role: "retailer",
-        licenseNumber: "RET-2023-015",
-        approvalDate: "2023-10-12",
-        walletAddress: "5Gh7...9Kp2",
-        status: "active",
-    },
-    {
-        id: "ACC003",
-        businessName: "Premium Spirits Co.",
-        email: "admin@premiumspirits.com",
-        role: "manufacturer",
-        licenseNumber: "MAN-2023-022",
-        approvalDate: "2023-10-20",
-        walletAddress: "3Jk9...7Lm4",
-        status: "active",
-    },
-]
+interface ApprovedAccount {
+    id: string
+    email: string
+    role: "manufacturer" | "retailer"
+    businessName: string
+    licenseNumber: string
+    walletAddress: string
+    verificationStatus: "approved"
+    createdAt: string // ISO date string
+    updatedAt: string // ISO date string
+}
 
 export default function AdminDashboard() {
     const router = useRouter()
-    const [activeTab, setActiveTab] = useState("pending");
-    const [selectedRegistration, setSelectedRegistration] = useState<any>(null);
-    const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-    const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
-    const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
-    const [rejectionReason, setRejectionReason] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
-    const [searchTerm, setSearchTerm] = useState("");
+    const { data: session, status } = useSession()
+    const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending")
+    const [pendingRegistrations, setPendingRegistrations] = useState<PendingRegistration[]>([])
+    const [approvedAccounts, setApprovedAccounts] = useState<ApprovedAccount[]>([])
+    const [selectedRegistration, setSelectedRegistration] = useState<PendingRegistration | null>(null)
+    const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+    const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false)
+    const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false)
+    const [rejectionReason, setRejectionReason] = useState("")
+    const [isLoading, setIsLoading] = useState(false)
+    const [searchTerm, setSearchTerm] = useState("")
 
-    // Check for admin authentication on component mount
+    // Check for admin authentication
     useEffect(() => {
-        const adminAuth = localStorage.getItem("adminAuth")
-        if (!adminAuth) {
+        if (status === "loading") return // Do nothing while loading
+        if (!session || !session.user.isAdmin) {
             router.push("/admin/login")
         }
-    }, [router])
+    }, [session, status, router]);
 
-    const handleLogout = () => {
-        // Clear admin authentication
-        localStorage.removeItem("adminAuth")
-        // Redirect to admin login
-        router.push("/admin/login")
+    // Fetch data on mount and when activeTab changes
+    useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true);
+            try {
+                if (activeTab === "pending") {
+                    const res = await fetch("/api/admin/pending-registrations");
+                    if (!res.ok) {
+                        toast.error("Failed to fetch pending registrations");
+                        throw new Error("Failed to fetch pending registrations");
+                    }
+                    const data: PendingRegistration[] = await res.json();
+                    setPendingRegistrations(Array.isArray(data) ? data : []);
+                } else {
+                    const res = await fetch("/api/admin/approved-accounts");
+                    if (!res.ok) {
+                        toast.error("Failed to fetch approved accounts");
+                        throw new Error("Failed to fetch approved accounts");
+                    }
+                    const data: ApprovedAccount[] = await res.json();
+                    setApprovedAccounts(Array.isArray(data) ? data : []);
+                }
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                toast.error("Error fetching data");
+                // Reset to empty arrays on error to prevent invalid state
+                if (activeTab === "pending") {
+                    setPendingRegistrations([]);
+                } else {
+                    setApprovedAccounts([]);
+                }
+            } finally {
+                setIsLoading(false);
+            }
+        }
+        fetchData();
+    }, [activeTab]);
+
+    const handleLogout = async () => {
+        await signOut({ callbackUrl: "/admin/login" })
         toast.success("Logged out successfully")
     }
 
-    const handleViewRegistration = (registration: any) => {
+    const handleViewRegistration = (registration: PendingRegistration) => {
         setSelectedRegistration(registration)
         setIsViewDialogOpen(true)
     }
 
-    const handleApproveRegistration = () => {
+    const handleApproveRegistration = async () => {
+        if (!selectedRegistration) return
         setIsLoading(true)
-        // Simulate approval process
-        setTimeout(() => {
-            setIsLoading(false)
+        try {
+            const res = await fetch(`/api/admin/approve-registration/${selectedRegistration.id}`, {
+                method: "POST",
+            })
+            if (!res.ok) {
+                toast.error("Failed to approve registration")
+                throw new Error("Failed to approve registration")
+            }
+            toast.success(`${selectedRegistration.businessName} has been approved`)
             setIsApproveDialogOpen(false)
             setIsViewDialogOpen(false)
             setSelectedRegistration(null)
-            toast.success(`${selectedRegistration.businessName} has been approved successfully`)
-            // In a real app, you would update the database and send notification
-        }, 1500)
+            // Refresh data
+            const dataRes = await fetch("/api/admin/pending-registrations")
+            if (dataRes.ok) {
+                const data = await dataRes.json()
+                setPendingRegistrations(data)
+            }
+        } catch (error) {
+            console.error("Error approving registration:", error)
+            toast.error("Error approving registration")
+        } finally {
+            setIsLoading(false)
+        }
     }
 
-    const handleRejectRegistration = () => {
+    const handleRejectRegistration = async () => {
+        if (!selectedRegistration) return
         setIsLoading(true)
-        // Simulate rejection process
-        setTimeout(() => {
-            setIsLoading(false)
+        try {
+            const res = await fetch(`/api/admin/reject-registration/${selectedRegistration.id}`, {
+                method: "POST",
+                body: JSON.stringify({ reason: rejectionReason }),
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            })
+            if (!res.ok) {
+                toast.error("Failed to reject registration")
+                throw new Error("Failed to reject registration")
+            }
+            toast.success(`${selectedRegistration.businessName} has been rejected`)
             setIsRejectDialogOpen(false)
             setIsViewDialogOpen(false)
-            toast.success(`${selectedRegistration.businessName} has been rejected`)
             setSelectedRegistration(null)
             setRejectionReason("")
-            // In a real app, you would update the database and send notification
-        }, 1500)
+            // Refresh pending registrations
+            const dataRes = await fetch("/api/admin/pending-registrations")
+            if (dataRes.ok) {
+                setPendingRegistrations(await dataRes.json())
+            }
+        } catch (error) {
+            console.error("Error rejecting registration:", error)
+            toast.error("Error rejecting registration")
+        } finally {
+            setIsLoading(false)
+        }
     }
 
-    const filteredPendingRegistrations = mockPendingRegistrations.filter(
+    const filteredPendingRegistrations = pendingRegistrations.filter(
         (reg) =>
             reg.businessName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            reg.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            reg.user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
             reg.licenseNumber.toLowerCase().includes(searchTerm.toLowerCase()),
     )
 
-    const filteredApprovedAccounts = mockApprovedAccounts.filter(
+    const filteredApprovedAccounts = approvedAccounts.filter(
         (acc) =>
             acc.businessName.toLowerCase().includes(searchTerm.toLowerCase()) ||
             acc.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -231,7 +269,7 @@ export default function AdminDashboard() {
                     <div className="container py-4">
                         {/* Mobile tabs */}
                         <div className="mb-6 md:hidden">
-                            <Tabs value={activeTab} onValueChange={setActiveTab}>
+                            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "pending" | "approved")}>
                                 <TabsList className="grid w-full grid-cols-2">
                                     <TabsTrigger value="pending">Pending</TabsTrigger>
                                     <TabsTrigger value="approved">Approved</TabsTrigger>
@@ -272,7 +310,7 @@ export default function AdminDashboard() {
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-2xl font-bold">
-                                        {mockPendingRegistrations.length + mockApprovedAccounts.length}
+                                        {pendingRegistrations.length + approvedAccounts.length}
                                     </div>
                                     <p className="text-xs text-gray-500 mt-1">All time</p>
                                 </CardContent>
@@ -282,7 +320,7 @@ export default function AdminDashboard() {
                                     <CardTitle className="text-sm font-medium text-gray-500">Pending Approval</CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">{mockPendingRegistrations.length}</div>
+                                    <div className="text-2xl font-bold">{pendingRegistrations.length}</div>
                                     <p className="text-xs text-gray-500 mt-1">Awaiting review</p>
                                 </CardContent>
                             </Card>
@@ -291,7 +329,7 @@ export default function AdminDashboard() {
                                     <CardTitle className="text-sm font-medium text-gray-500">Approved Accounts</CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">{mockApprovedAccounts.length}</div>
+                                    <div className="text-2xl font-bold">{approvedAccounts.length}</div>
                                     <p className="text-xs text-gray-500 mt-1">Active on blockchain</p>
                                 </CardContent>
                             </Card>
@@ -338,7 +376,7 @@ export default function AdminDashboard() {
                                                             </Badge>
                                                         </TableCell>
                                                         <TableCell>{registration.licenseNumber}</TableCell>
-                                                        <TableCell>{registration.submissionDate}</TableCell>
+                                                        <TableCell>{new Date(registration.createdAt).toLocaleDateString()}</TableCell>
                                                         <TableCell className="text-right">
                                                             <Button
                                                                 variant="outline"
@@ -415,10 +453,10 @@ export default function AdminDashboard() {
                                                                 variant="outline"
                                                                 className="bg-green-50 text-green-700 hover:bg-green-50 border-green-200"
                                                             >
-                                                                {account.status.charAt(0).toUpperCase() + account.status.slice(1)}
+                                                                Active
                                                             </Badge>
                                                         </TableCell>
-                                                        <TableCell>{account.approvalDate}</TableCell>
+                                                        <TableCell>{new Date(account.updatedAt).toLocaleDateString()}</TableCell>
                                                     </TableRow>
                                                 ))
                                             ) : (
@@ -473,7 +511,7 @@ export default function AdminDashboard() {
                                 </div>
                                 <div>
                                     <h3 className="text-sm font-medium text-gray-500">Email</h3>
-                                    <p className="mt-1">{selectedRegistration.email}</p>
+                                    <p className="mt-1">{selectedRegistration.user.email}</p>
                                 </div>
                                 <div>
                                     <h3 className="text-sm font-medium text-gray-500">License Number</h3>
@@ -481,7 +519,11 @@ export default function AdminDashboard() {
                                 </div>
                                 <div>
                                     <h3 className="text-sm font-medium text-gray-500">Submission Date</h3>
-                                    <p className="mt-1">{selectedRegistration.submissionDate}</p>
+                                    <p className="mt-1">{new Date(selectedRegistration.createdAt).toLocaleDateString()}</p>
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-medium text-gray-500">Wallet Address</h3>
+                                    <p className="mt-1">{selectedRegistration.walletAddress}</p>
                                 </div>
                             </div>
 
@@ -490,7 +532,11 @@ export default function AdminDashboard() {
                                 <div className="mt-2 flex items-center gap-2 rounded-md border border-gray-200 p-3">
                                     <FileText className="h-5 w-5 text-indigo-600" />
                                     <span className="flex-1 truncate">License Document</span>
-                                    <Button variant="outline" size="sm">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => window.open(selectedRegistration.documentUrl, "_blank")}
+                                    >
                                         View
                                     </Button>
                                 </div>

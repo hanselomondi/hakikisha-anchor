@@ -46,31 +46,78 @@ export const authOptions: NextAuthOptions = {
                     username: existingUser.username,
                     email: existingUser.email,
                     role: existingUser.role,
+                    verificationStatus: existingUser.verificationStatus,
+                    walletAddress: existingUser.walletAddress ?? undefined,
                     createdAt: existingUser.createdAt
+                }
+            }
+        }),
+
+        // Admin Credentials Provider
+        CredentialsProvider({
+            id: "admin-credentials",
+            name: "Admin Credentials",
+            credentials: {
+                email: { label: "Email", type: "text", placeholder: "admin@email.com" },
+                password: { label: "Password", type: "password" }
+            },
+            async authorize(credentials) {
+                if (!credentials?.email || !credentials?.password) {
+                    return null;
+                }
+
+                const existingAdmin = await db.admin.findUnique({
+                    where: { email: credentials?.email }
+                });
+
+                if (!existingAdmin) {
+                    return null;
+                }
+
+                const isValid = await compare(credentials.password, existingAdmin.password);
+                if (!isValid) {
+                    return null;
+                }
+
+                return {
+                    id: `${existingAdmin.id}`,
+                    email: existingAdmin.email,
+                    createdAt: existingAdmin.createdAt,
+                    isAdmin: true,
                 }
             }
         })
     ],
     callbacks: {
+        async session({ session, token }) {
+            if (token.isAdmin) {
+                session.user = {
+                    id: token.id,
+                    email: token.email,
+                    isAdmin: true,
+                }
+            } else {
+                session.user = {
+                    id: token.id,
+                    email: token.email,
+                    role: token.role,
+                    walletAddress: token.walletAddress,
+                }
+            }
+            return session
+        },
         async jwt({ token, user }) {
             if (user) {
-                return {
-                    ...token,
-                    username: user.username,
-                    role: user.role
+                token.id = user.id
+                token.email = user.email
+                if (user.isAdmin) {
+                    token.isAdmin = true
+                } else {
+                    token.role = user.role
+                    token.walletAddress = user.walletAddress
                 }
             }
-            return token;
+            return token
         },
-        async session({ session, token }) {
-            return {
-                ...session,
-                user: {
-                    ...session.user,
-                    username: token.username,
-                    role: token.role
-                }
-            }
-        }
-    }
+    },
 };
