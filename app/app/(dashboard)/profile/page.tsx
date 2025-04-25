@@ -1,72 +1,114 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useState } from "react"
-import Link from "next/link"
-import { Shield, Upload, Wallet, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react";
+import { Shield, Upload, Wallet, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import UserNavBar from "@/components/UserNavBar";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 export default function ProfilePage() {
-  const [isSubmitted, setIsSubmitted] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [file, setFile] = useState<File | null>(null)
+  const [status, setStatus] = useState<"not_submitted" | "pending" | "approved" | "rejected">("not_submitted");
+  const [isLoading, setIsLoading] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
-    name: "",
+    businessName: "",
     licenseNumber: "",
-    walletAddress: "8Kvj...F3pZ", // Pre-filled from connected wallet
-  })
-  const router = useRouter()
+    role: "manufacturer" as "manufacturer" | "retailer",
+  });
+  const [rejectionReason, setRejectionReason] = useState<string | null>(null);
+  const router = useRouter();
+  const { publicKey } = useWallet();
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const res = await fetch("/api/user/registration-status");
+        if (res.ok) {
+          const data = await res.json();
+          setStatus(data.status);
+          if (data.status === "rejected") {
+            // Fetch rejection reason from pendingRegistration
+            const pendingRes = await fetch("/api/user/pending-registration");
+            if (pendingRes.ok) {
+              const pendingData = await pendingRes.json();
+              setRejectionReason(pendingData.rejectionReason || "No reason provided");
+            }
+          }
+          if (data.status === "approved") {
+            router.push("/manufacturer");
+          }
+        } else {
+          toast.error("Failed to fetch registration status");
+        }
+      } catch (error) {
+        toast.error("An unexpected error occurred");
+        console.error("Fetch status error:", error);
+      }
+    };
+    fetchStatus();
+  }, [router]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0])
+      setFile(e.target.files[0]);
     }
-  }
+  };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-    }))
-  }
+    }));
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    // Simulate form submission
-    setTimeout(() => {
-      setIsLoading(false)
-      setIsSubmitted(true)
-    }, 1500)
-  }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!publicKey) {
+      toast.error("Please connect your wallet");
+      return;
+    }
+    if (!file) {
+      toast.error("Please upload a license document");
+      return;
+    }
+
+    setIsLoading(true);
+    const formDataToSend = new FormData();
+    formDataToSend.append("businessName", formData.businessName);
+    formDataToSend.append("licenseNumber", formData.licenseNumber);
+    formDataToSend.append("role", formData.role);
+    formDataToSend.append("walletAddress", publicKey.toString());
+    formDataToSend.append("file", file);
+
+    try {
+      const res = await fetch("/api/user/submit-registration", {
+        method: "POST",
+        body: formDataToSend,
+      });
+      if (res.ok) {
+        toast.success("Profile submitted successfully");
+        setStatus("pending");
+      } else {
+        const error = await res.json();
+        toast.error(error.message || "Failed to submit profile");
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred");
+      console.error("Submit error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen flex-col">
-      {/* Navbar */}
-      <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-sm">
-        <div className="container flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <Shield className="h-6 w-6 text-indigo-600" />
-            <span className="text-xl font-bold text-indigo-700">Hakikisha</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Wallet className="h-4 w-4" />
-              <span>8Kvj...F3pZ</span>
-            </div>
-            <Button variant="ghost" size="sm">
-              Disconnect
-            </Button>
-          </div>
-        </div>
-      </header>
-
+      <UserNavBar />
       <main className="flex-1 bg-gray-50 p-4">
         <div className="container max-w-4xl py-8">
           <div className="mb-8">
@@ -76,7 +118,7 @@ export default function ProfilePage() {
             </p>
           </div>
 
-          {isSubmitted ? (
+          {status === "pending" ? (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle>Verification Pending</CardTitle>
@@ -106,36 +148,35 @@ export default function ProfilePage() {
                     </div>
                     <div>
                       <p className="font-medium">Verification in progress</p>
-                      <p className="text-sm text-indigo-600">You'll receive a notification once approved</p>
+                      <p className="text-sm text-indigo-600">You'll be notified once approved</p>
                     </div>
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  <h3 className="font-medium text-gray-900">Submitted Information</h3>
-                  <div className="grid grid-cols-2 gap-4 rounded-lg border p-4">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Name</p>
-                      <p className="text-gray-900">{formData.name}</p>
+              </CardContent>
+            </Card>
+          ) : status === "rejected" ? (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle>Verification Rejected</CardTitle>
+                <CardDescription>
+                  Your profile submission was rejected. Please review the reason and resubmit.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-lg bg-red-50 p-4 text-red-700">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-full bg-red-100 p-1">
+                      <X className="h-5 w-5 text-red-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-500">License Number</p>
-                      <p className="text-gray-900">{formData.licenseNumber}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Wallet Address</p>
-                      <p className="text-gray-900">{formData.walletAddress}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Document</p>
-                      <p className="text-gray-900">{file?.name || "license.pdf"}</p>
+                      <p className="font-medium">Rejection Reason</p>
+                      <p className="text-sm text-red-600">{rejectionReason}</p>
                     </div>
                   </div>
                 </div>
-
                 <div className="flex justify-end">
-                  <Button variant="outline" onClick={() => setIsSubmitted(false)}>
-                    Edit Submission
+                  <Button variant="outline" onClick={() => setStatus("not_submitted")}>
+                    Resubmit Profile
                   </Button>
                 </div>
               </CardContent>
@@ -150,12 +191,12 @@ export default function ProfilePage() {
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Business Name</Label>
+                      <Label htmlFor="businessName">Business Name</Label>
                       <Input
-                        id="name"
-                        name="name"
+                        id="businessName"
+                        name="businessName"
                         placeholder="Enter your business name"
-                        value={formData.name}
+                        value={formData.businessName}
                         onChange={handleInputChange}
                         required
                         maxLength={50}
@@ -176,15 +217,30 @@ export default function ProfilePage() {
                   </div>
 
                   <div className="space-y-2">
+                    <Label htmlFor="role">Role</Label>
+                    <select
+                      id="role"
+                      name="role"
+                      value={formData.role}
+                      onChange={handleInputChange}
+                      className="w-full rounded-md border border-gray-300 p-2"
+                      required
+                    >
+                      <option value="manufacturer">Manufacturer</option>
+                      <option value="retailer">Retailer</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="walletAddress">Wallet Address</Label>
                     <Input
                       id="walletAddress"
                       name="walletAddress"
-                      value={formData.walletAddress}
+                      value={publicKey ? publicKey.toString() : "Connect wallet first"}
                       disabled
                       className="bg-gray-100"
                     />
-                    <p className="text-xs text-gray-500">This is the connected wallet address</p>
+                    <p className="text-xs text-gray-500">Connect your Solana wallet to proceed</p>
                   </div>
 
                   <div className="space-y-2">
@@ -247,7 +303,7 @@ export default function ProfilePage() {
                     <Button
                       type="submit"
                       className="bg-indigo-600 hover:bg-indigo-700"
-                      disabled={isLoading || !formData.name || !formData.licenseNumber || !file}
+                      disabled={isLoading || !formData.businessName || !formData.licenseNumber || !file || !publicKey}
                     >
                       {isLoading ? (
                         <div className="flex items-center">
@@ -285,5 +341,5 @@ export default function ProfilePage() {
         </div>
       </main>
     </div>
-  )
+  );
 }

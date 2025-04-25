@@ -20,7 +20,8 @@ export async function GET(request: Request) {
                 }
             }
         });
-        return NextResponse.json({ pendingRegistrations }, { status: 200 });
+        console.log("Pending registrations", pendingRegistrations);
+        return NextResponse.json(pendingRegistrations, { status: 200 });
     } catch (error) {
         console.error("Error fetching pending registrations:", error);
         return NextResponse.json({ message: "Error fetching pending registrations" }, { status: 500 });

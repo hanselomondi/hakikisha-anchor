@@ -24,7 +24,7 @@ export async function GET(request: Request) {
                 updatedAt: true,
             }
         });
-        return NextResponse.json({ approvedAccounts }, { status: 200 });
+        return NextResponse.json(approvedAccounts, { status: 200 });
     } catch (error) {
         console.error("Error fetching approved accounts:", error);
         return NextResponse.json({ message: "Error fetching approved accounts" }, { status: 500 });

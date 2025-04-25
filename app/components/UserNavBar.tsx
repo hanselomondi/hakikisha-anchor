@@ -1,4 +1,4 @@
-import { Shield } from "lucide-react";
+import { LogOut, Shield } from "lucide-react";
 import Link from "next/link";
 import WalletButtonClient from "./WalletMultiButton";
 import { Button } from "./ui/button";
@@ -14,10 +14,17 @@ const UserNavBar = () => {
                 </Link>
                 <div className="flex items-center gap-4">
                     <WalletButtonClient />
-                    <Button onClick={() => signOut({
-                        redirect: true,
-                        callbackUrl: `${window.location.origin}/sign-in`
-                    })} variant='destructive'>
+                    <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() =>
+                            signOut({
+                                redirect: true,
+                                callbackUrl: `${window.location.origin}/sign-in`,
+                            })
+                        }
+                    >
+                        <LogOut className="mr-2 h-4 w-4" />
                         Sign Out
                     </Button>
                 </div>

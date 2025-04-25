@@ -10,11 +10,9 @@ export default function Home() {
       <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-sm">
         <div className="container flex h-16 items-center justify-between px-5">
           <div className="flex items-center gap-2">
-            <Link href='/'>
-              <div className="flex items-center space-x-3">
-                <Shield className="h-6 w-6 text-indigo-600" />
-                <span className="text-xl font-bold text-indigo-700">Hakikisha</span>
-              </div>
+            <Link href="/" className="flex items-center gap-2">
+              <Shield className="h-6 w-6 text-indigo-600" />
+              <span className="text-xl font-bold text-indigo-700">Hakikisha</span>
             </Link>
           </div>
           <nav className="hidden md:flex items-center gap-6">
@@ -68,6 +66,9 @@ export default function Home() {
               Ensuring authenticity in the alcohol supply chain through blockchain verification. Track products from
               manufacturer to consumer with immutable Solana records.
             </p>
+            <p className="mt-6 max-w-2xl text-lg text-indigo-100">
+              Connect your Solana wallet and join our platform.
+            </p>
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
               <Button asChild variant="outline" size="lg" className="border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-700 hover:text-white">
                 <Link href="/sign-up">Sign Up Now</Link>
@@ -118,7 +119,7 @@ export default function Home() {
                   that follows each bottle through the supply chain.
                 </p>
                 <div className="mt-4 flex items-center text-sm font-medium text-indigo-600">
-                  <span>Register as Manufacturer</span>
+                  <Link href="/sign-up">Register as Manufacturer</Link>
                   <ArrowRight className="ml-1 h-4 w-4" />
                 </div>
               </div>
@@ -152,7 +153,7 @@ export default function Home() {
                   sold with blockchain verification.
                 </p>
                 <div className="mt-4 flex items-center text-sm font-medium text-indigo-600">
-                  <span>Register as Retailer</span>
+                  <Link href="/sign-up">Register as Retailer</Link>
                   <ArrowRight className="ml-1 h-4 w-4" />
                 </div>
               </div>
@@ -213,12 +214,12 @@ export default function Home() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/contact" className="text-sm text-gray-600 hover:text-indigo-600">
+                  <Link href="#" className="text-sm text-gray-600 hover:text-indigo-600">
                     Contact
                   </Link>
                 </li>
                 <li>
-                  <Link href="/privacy" className="text-sm text-gray-600 hover:text-indigo-600">
+                  <Link href="#" className="text-sm text-gray-600 hover:text-indigo-600">
                     Privacy Policy
                   </Link>
                 </li>

@@ -4,9 +4,9 @@ import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { Wallet } from "lucide-react";
 
 export default function WalletButtonClient() {
-    const { publicKey } = useWallet();
+    const { publicKey, wallet, disconnect } = useWallet();
 
-    // Format wallet address to show first 4 and last 4 characters
+    // Showing the first 4 and last 4 characters of the wallet address
     const formatWalletAddress = (address: string) => {
         return `${address.slice(0, 4)}...${address.slice(-4)}`;
     };

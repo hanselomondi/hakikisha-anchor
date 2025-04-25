@@ -3,10 +3,11 @@ import { getAdminKeypair } from "@/lib/getAdminKeypair";
 import { Connection, PublicKey, SystemProgram } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import { NextResponse } from "next/server";
-import { Idl, Wallet } from "@coral-xyz/anchor";
+import { Idl } from "@coral-xyz/anchor";
 import idl from '@/app/idl/hakikisha.json';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
 
 const programId = new PublicKey('3bpsmdk6AE4foSTDLGpxNjb5eaYaVUaWLizyC9zouRAv');
 
@@ -16,7 +17,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { id } = params;
+    const { id } = await params;
     
     try {
         const pendingRegistration = await db.pendingRegistration.findUnique({
@@ -32,12 +33,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
         }
 
         // Solana interaction
-        const connection = new Connection("https://localhost:8899", "confirmed");
+        const connection = new Connection("http://127.0.0.1:8899", "confirmed");
         const adminKeyPair = getAdminKeypair();
-        const provider = new anchor.AnchorProvider(connection, new Wallet(adminKeyPair), {});
+        const adminWallet = new NodeWallet(adminKeyPair);
+        const provider = new anchor.AnchorProvider(connection, adminWallet, {});
         const program = new anchor.Program(
             idl as Idl,
-            programId,
             provider
         );
         const { role, businessName, licenseNumber, walletAddress } = pendingRegistration;
@@ -50,7 +51,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
             );
 
             const tx = await program.methods
-                .createManufacturer(businessName, licenseNumber)
+                .registerManufacturer(businessName, licenseNumber)
                 .accounts({
                     admin: adminKeyPair.publicKey,
                     manufacturer: manufacturerAccountPda,
@@ -67,7 +68,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
             );
 
             const tx = await program.methods
-                .createRetailer(businessName, licenseNumber)
+                .registerRetailer(businessName, licenseNumber)
                 .accounts({
                     admin: adminKeyPair.publicKey,
                     retailer: retailerAccountPda,

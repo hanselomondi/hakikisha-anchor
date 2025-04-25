@@ -38,19 +38,36 @@ const SignInForm = () => {
   });
 
   const onSubmit = async (values: z.infer<typeof FormSchema>) => {
-    const signInData = await signIn('credentials', {
-      email: values.email,
-      password: values.password,
-      redirect: false
-    });
+    try {
+      const signInData = await signIn('credentials', {
+        email: values.email,
+        password: values.password,
+        redirect: false
+      });
 
-    if (signInData?.error) {
-      console.log(signInData.error);
-      toast("Oops! Something went wrong");
-    } else {
-      console.log('Sign in successful');
-      toast("Sign In Successfull!");
-      router.refresh();
+      if (signInData?.error) {
+        console.log(`Sign-in error: ${signInData.error}`);
+        toast.error("Invalid email or password");
+      } else {
+        console.log('Sign in successful');
+        toast.success("Sign In Successfull!");
+        const res = await fetch('/api/user/registration-status');
+        if (res.ok) {
+          const { status } = await res.json();
+          if (status === 'approved') {
+            router.push('/manufacturer');
+          } else {
+            router.push('profile');
+          }
+        } else {
+          toast.error("Failed to fetch registration status");
+          console.error('Failed to fetch registration status');
+          router.push('/profile');
+        }
+      }
+    } catch (error) {
+      console.error('Error during sign-in:', error);
+      toast.error("An error occurred during sign-in");
     }
   };
 
@@ -105,11 +122,11 @@ const SignInForm = () => {
           or
         </div>
         <div className="mt-6 text-center text-sm text-gray-600">
-            Don't have an account?{' '}
-            <Link href="/sign-up" className="text-indigo-600 hover:underline font-medium">
-              Sign up
-            </Link>
-          </div>
+          Don't have an account?{' '}
+          <Link href="/sign-up" className="text-indigo-600 hover:underline font-medium">
+            Sign up
+          </Link>
+        </div>
       </Form>
     </div>
   );

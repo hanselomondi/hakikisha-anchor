@@ -32,6 +32,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
 import { signOut, useSession } from "next-auth/react"
+import Loading from "@/components/Loading"
 
 // types based on Prisma schema
 interface PendingRegistration {
@@ -309,10 +310,16 @@ export default function AdminDashboard() {
                                     <CardTitle className="text-sm font-medium text-gray-500">Total Registrations</CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">
-                                        {pendingRegistrations.length + approvedAccounts.length}
-                                    </div>
-                                    <p className="text-xs text-gray-500 mt-1">All time</p>
+                                    {isLoading ? (
+                                        <Loading />
+                                    ) : (
+                                        <div>
+                                            <div className="text-2xl font-bold">
+                                                {pendingRegistrations.length + approvedAccounts.length}
+                                            </div>
+                                            <p className="text-xs text-gray-500 mt-1">All time</p>
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
                             <Card>
@@ -320,8 +327,14 @@ export default function AdminDashboard() {
                                     <CardTitle className="text-sm font-medium text-gray-500">Pending Approval</CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">{pendingRegistrations.length}</div>
-                                    <p className="text-xs text-gray-500 mt-1">Awaiting review</p>
+                                    {isLoading ? (
+                                        <Loading />
+                                    ) : (
+                                        <div>
+                                            <div className="text-2xl font-bold">{pendingRegistrations.length}</div>
+                                            <p className="text-xs text-gray-500 mt-1">Awaiting review</p>
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
                             <Card>
@@ -329,8 +342,14 @@ export default function AdminDashboard() {
                                     <CardTitle className="text-sm font-medium text-gray-500">Approved Accounts</CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">{approvedAccounts.length}</div>
-                                    <p className="text-xs text-gray-500 mt-1">Active on blockchain</p>
+                                    {isLoading ? (
+                                        <Loading />
+                                    ) : (
+                                        <div>
+                                            <div className="text-2xl font-bold">{approvedAccounts.length}</div>
+                                            <p className="text-xs text-gray-500 mt-1">Active on blockchain</p>
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
                         </div>
@@ -343,62 +362,66 @@ export default function AdminDashboard() {
                                     <CardDescription>Review and approve new account requests</CardDescription>
                                 </CardHeader>
                                 <CardContent className="p-0">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Business Name</TableHead>
-                                                <TableHead>Role</TableHead>
-                                                <TableHead>License Number</TableHead>
-                                                <TableHead>Submission Date</TableHead>
-                                                <TableHead className="text-right">Actions</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {filteredPendingRegistrations.length > 0 ? (
-                                                filteredPendingRegistrations.map((registration) => (
-                                                    <TableRow key={registration.id} className="hover:bg-gray-50">
-                                                        <TableCell className="font-medium">{registration.businessName}</TableCell>
-                                                        <TableCell>
-                                                            <Badge
-                                                                variant="outline"
-                                                                className={
-                                                                    registration.role === "manufacturer"
-                                                                        ? "bg-blue-50 text-blue-700 hover:bg-blue-50 border-blue-200"
-                                                                        : "bg-green-50 text-green-700 hover:bg-green-50 border-green-200"
-                                                                }
-                                                            >
-                                                                {registration.role === "manufacturer" ? (
-                                                                    <Package className="mr-1 h-3 w-3" />
-                                                                ) : (
-                                                                    <ShoppingBag className="mr-1 h-3 w-3" />
-                                                                )}
-                                                                {registration.role.charAt(0).toUpperCase() + registration.role.slice(1)}
-                                                            </Badge>
-                                                        </TableCell>
-                                                        <TableCell>{registration.licenseNumber}</TableCell>
-                                                        <TableCell>{new Date(registration.createdAt).toLocaleDateString()}</TableCell>
-                                                        <TableCell className="text-right">
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => handleViewRegistration(registration)}
-                                                                className="mr-2"
-                                                            >
-                                                                <Eye className="mr-2 h-4 w-4" />
-                                                                View
-                                                            </Button>
+                                    {isLoading ? (
+                                        <Loading />
+                                    ) : (
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Business Name</TableHead>
+                                                    <TableHead>Role</TableHead>
+                                                    <TableHead>License Number</TableHead>
+                                                    <TableHead>Submission Date</TableHead>
+                                                    <TableHead className="text-right">Actions</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {filteredPendingRegistrations.length > 0 ? (
+                                                    filteredPendingRegistrations.map((registration) => (
+                                                        <TableRow key={registration.id} className="hover:bg-gray-50">
+                                                            <TableCell className="font-medium">{registration.businessName}</TableCell>
+                                                            <TableCell>
+                                                                <Badge
+                                                                    variant="outline"
+                                                                    className={
+                                                                        registration.role === "manufacturer"
+                                                                            ? "bg-blue-50 text-blue-700 hover:bg-blue-50 border-blue-200"
+                                                                            : "bg-green-50 text-green-700 hover:bg-green-50 border-green-200"
+                                                                    }
+                                                                >
+                                                                    {registration.role === "manufacturer" ? (
+                                                                        <Package className="mr-1 h-3 w-3" />
+                                                                    ) : (
+                                                                        <ShoppingBag className="mr-1 h-3 w-3" />
+                                                                    )}
+                                                                    {registration.role.charAt(0).toUpperCase() + registration.role.slice(1)}
+                                                                </Badge>
+                                                            </TableCell>
+                                                            <TableCell>{registration.licenseNumber}</TableCell>
+                                                            <TableCell>{new Date(registration.createdAt).toLocaleDateString()}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => handleViewRegistration(registration)}
+                                                                    className="mr-2"
+                                                                >
+                                                                    <Eye className="mr-2 h-4 w-4" />
+                                                                    View
+                                                                </Button>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))
+                                                ) : (
+                                                    <TableRow>
+                                                        <TableCell colSpan={5} className="h-24 text-center">
+                                                            No pending registrations found.
                                                         </TableCell>
                                                     </TableRow>
-                                                ))
-                                            ) : (
-                                                <TableRow>
-                                                    <TableCell colSpan={5} className="h-24 text-center">
-                                                        No pending registrations found.
-                                                    </TableCell>
-                                                </TableRow>
-                                            )}
-                                        </TableBody>
-                                    </Table>
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    )}
                                 </CardContent>
                             </Card>
                         )}
@@ -411,63 +434,67 @@ export default function AdminDashboard() {
                                     <CardDescription>Manage existing manufacturer and retailer accounts</CardDescription>
                                 </CardHeader>
                                 <CardContent className="p-0">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Business Name</TableHead>
-                                                <TableHead>Role</TableHead>
-                                                <TableHead>License Number</TableHead>
-                                                <TableHead>Wallet Address</TableHead>
-                                                <TableHead>Status</TableHead>
-                                                <TableHead>Approval Date</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {filteredApprovedAccounts.length > 0 ? (
-                                                filteredApprovedAccounts.map((account) => (
-                                                    <TableRow key={account.id} className="hover:bg-gray-50">
-                                                        <TableCell className="font-medium">{account.businessName}</TableCell>
-                                                        <TableCell>
-                                                            <Badge
-                                                                variant="outline"
-                                                                className={
-                                                                    account.role === "manufacturer"
-                                                                        ? "bg-blue-50 text-blue-700 hover:bg-blue-50 border-blue-200"
-                                                                        : "bg-green-50 text-green-700 hover:bg-green-50 border-green-200"
-                                                                }
-                                                            >
-                                                                {account.role === "manufacturer" ? (
-                                                                    <Package className="mr-1 h-3 w-3" />
-                                                                ) : (
-                                                                    <ShoppingBag className="mr-1 h-3 w-3" />
-                                                                )}
-                                                                {account.role.charAt(0).toUpperCase() + account.role.slice(1)}
-                                                            </Badge>
-                                                        </TableCell>
-                                                        <TableCell>{account.licenseNumber}</TableCell>
-                                                        <TableCell>
-                                                            <code className="rounded bg-gray-100 px-2 py-1 text-xs">{account.walletAddress}</code>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Badge
-                                                                variant="outline"
-                                                                className="bg-green-50 text-green-700 hover:bg-green-50 border-green-200"
-                                                            >
-                                                                Active
-                                                            </Badge>
-                                                        </TableCell>
-                                                        <TableCell>{new Date(account.updatedAt).toLocaleDateString()}</TableCell>
-                                                    </TableRow>
-                                                ))
-                                            ) : (
+                                    {isLoading ? (
+                                        <Loading />
+                                    ) : (
+                                        <Table>
+                                            <TableHeader>
                                                 <TableRow>
-                                                    <TableCell colSpan={6} className="h-24 text-center">
-                                                        No approved accounts found.
-                                                    </TableCell>
+                                                    <TableHead>Business Name</TableHead>
+                                                    <TableHead>Role</TableHead>
+                                                    <TableHead>License Number</TableHead>
+                                                    <TableHead>Wallet Address</TableHead>
+                                                    <TableHead>Status</TableHead>
+                                                    <TableHead>Approval Date</TableHead>
                                                 </TableRow>
-                                            )}
-                                        </TableBody>
-                                    </Table>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {filteredApprovedAccounts.length > 0 ? (
+                                                    filteredApprovedAccounts.map((account) => (
+                                                        <TableRow key={account.id} className="hover:bg-gray-50">
+                                                            <TableCell className="font-medium">{account.businessName}</TableCell>
+                                                            <TableCell>
+                                                                <Badge
+                                                                    variant="outline"
+                                                                    className={
+                                                                        account.role === "manufacturer"
+                                                                            ? "bg-blue-50 text-blue-700 hover:bg-blue-50 border-blue-200"
+                                                                            : "bg-green-50 text-green-700 hover:bg-green-50 border-green-200"
+                                                                    }
+                                                                >
+                                                                    {account.role === "manufacturer" ? (
+                                                                        <Package className="mr-1 h-3 w-3" />
+                                                                    ) : (
+                                                                        <ShoppingBag className="mr-1 h-3 w-3" />
+                                                                    )}
+                                                                    {account.role.charAt(0).toUpperCase() + account.role.slice(1)}
+                                                                </Badge>
+                                                            </TableCell>
+                                                            <TableCell>{account.licenseNumber}</TableCell>
+                                                            <TableCell>
+                                                                <code className="rounded bg-gray-100 px-2 py-1 text-xs">{account.walletAddress}</code>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Badge
+                                                                    variant="outline"
+                                                                    className="bg-green-50 text-green-700 hover:bg-green-50 border-green-200"
+                                                                >
+                                                                    Active
+                                                                </Badge>
+                                                            </TableCell>
+                                                            <TableCell>{new Date(account.updatedAt).toLocaleDateString()}</TableCell>
+                                                        </TableRow>
+                                                    ))
+                                                ) : (
+                                                    <TableRow>
+                                                        <TableCell colSpan={6} className="h-24 text-center">
+                                                            No approved accounts found.
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    )}
                                 </CardContent>
                             </Card>
                         )}

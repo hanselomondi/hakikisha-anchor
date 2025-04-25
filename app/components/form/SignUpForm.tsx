@@ -51,24 +51,30 @@ const SignUpForm = () => {
   });
 
   const onSubmit = async (values: z.infer<typeof FormSchema>) => {
-    const response = await fetch("/api/user", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        username: values.username,
-        email: values.email,
-        password: values.password,
-        role: values.role,
-      })
-    })
+    try {
+      const response = await fetch("/api/user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: values.username,
+          email: values.email,
+          password: values.password,
+          role: values.role,
+        })
+      });
 
-    if (response.ok) {
-      router.push('/sign-in');
-    } else {
-      const error = await response.json();
-      toast(error.message);
+      if (response.ok) {
+        toast.success("Account created successfully! Please sign in then proceed to complete your profile");
+        router.push('/sign-in');
+      } else {
+        const error = await response.json();
+        toast(error.message);
+      }
+    } catch (error) {
+      console.error("Error creating account:", error);
+      toast.error("An error occurred while creating your account.");
     }
   };
 

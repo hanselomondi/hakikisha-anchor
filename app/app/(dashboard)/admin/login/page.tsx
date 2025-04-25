@@ -78,7 +78,7 @@ export default function AdminLogin() {
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="username">Email</Label>
+                            <Label htmlFor="email">Email</Label>
                             <Input
                                 id="email"
                                 name="email"

@@ -27,6 +27,7 @@ model User {
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   pendingRegistration PendingRegistration?
+  Product             Product[]            @relation("ManufacturerProducts")
 }
 
 model PendingRegistration {
@@ -66,4 +67,27 @@ enum RegistrationStatus {
   pending
   approved
   rejected
+}
+
+model Product {
+  id                String            @id @default(uuid())
+  productId         String            @unique
+  batchNumber       Int
+  name              String
+  description       String?
+  productionDate    BigInt
+  status            String            @default("active")
+  owner             String
+  blockchainAccount String
+  manufacturerId    String
+  manufacturer      User              @relation("ManufacturerProducts", fields: [manufacturerId], references: [id])
+  transfers         ProductTransfer[]
+}
+
+model ProductTransfer {
+  id             String   @id @default(uuid())
+  productId      String
+  product        Product  @relation(fields: [productId], references: [id])
+  retailerWallet String
+  transferDate   DateTime @default(now())
 }
