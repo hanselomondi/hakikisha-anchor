@@ -25,6 +25,7 @@ import { toast } from "sonner"
 import { useWallet } from "@solana/wallet-adapter-react"
 import { useRouter } from "next/navigation"
 import { SolanaService } from "@/lib/solanaService"
+import { PublicKey } from "@solana/web3.js"
 const WalletButtonClient = dynamic(() => import("@/components/WalletMultiButton"), { ssr: false });
 
 interface Product {
@@ -50,8 +51,9 @@ interface TransferredProduct {
 export default function ManufacturerDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { publicKey, wallet } = useWallet();
-  const [verificationStatus, setVerificationStatus] = useState<"not_submitted" | "pending" | "approved" | "rejected">("not_submitted");
+  const { publicKey, wallet, connected } = useWallet();
+  const [verificationStatus, setVerificationStatus] = useState<"not_submitted" | "pending" | "approved" | "rejected" | null>(null);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [activeTab, setActiveTab] = useState<"register" | "products" | "transferred">("register");
   const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -85,22 +87,26 @@ export default function ManufacturerDashboard() {
         const res = await fetch("/api/user/registration-status");
         if (res.ok) {
           const data = await res.json();
-          if (data.status !== "approved") {
-            router.push("/profile");
-          }
+          setVerificationStatus(data.status);
         } else {
           toast.error("Failed to fetch registration status");
           console.error("Failed to fetch registration status");
-          router.push("/profile");
         }
       } catch (error) {
         toast.error("An unexpected error occurred");
         console.error("Fetch status error:", error);
-        router.push("/profile");
       }
     };
     fetchStatus();
   }, [session, status, router]);
+
+  // Handle redirection if not approved
+  useEffect(() => {
+    if (verificationStatus && verificationStatus !== "approved") {
+      setIsRedirecting(true);
+      router.push("/profile");
+    }
+  }, [verificationStatus, router]);
 
   // Fetch products and transferred products
   useEffect(() => {
@@ -153,8 +159,8 @@ export default function ManufacturerDashboard() {
 
   // Register a new product
   const handleRegisterProduct = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!publicKey || !wallet) {
+    e.preventDefault();
+    if (!publicKey || !wallet || !connected) {
       toast.error("Please connect your wallet");
       return;
     }
@@ -175,7 +181,8 @@ export default function ManufacturerDashboard() {
 
     setIsLoading(true)
     try {
-      const solanaService = new SolanaService(wallet);
+      console.log("Wallet:", wallet);
+      const solanaService = new SolanaService(wallet.adapter);
       const { tx, productAccount } = await solanaService.registerProduct(
         productForm.productId,
         batchNumber,
@@ -184,6 +191,9 @@ export default function ManufacturerDashboard() {
         productForm.description
       );
 
+      console.log("On-chain registration successful. Transaction:", tx, "Product Account:", productAccount);
+      toast.success("Product registered on-chain successfully");
+      console.log("Product registration transaction:", tx);
       // Save product in RDBMS
       const res = await fetch("/api/manufacturer/products", {
         method: "POST",
@@ -193,10 +203,12 @@ export default function ManufacturerDashboard() {
           batchNumber: productForm.batchNumber,
           name: productForm.name,
           description: productForm.description,
-          productionDate: productForm.productionDate,  // Store as ISO string for DB
+          productionDate: productionDate.toString(),  // Send as Unix timestamp (string)
           blockchainAccount: productAccount,
         }),
       });
+
+      console.log("API Response Status:", res.status, "OK:", res.ok);
 
       if (res.ok) {
         toast.success("Product registered successfully");
@@ -250,9 +262,17 @@ export default function ManufacturerDashboard() {
       return;
     }
 
+    // Validate retailer wallet address
+    try {
+      new PublicKey(retailerWallet);
+    } catch (error) {
+      toast.error("Invalid retailer wallet address");
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const solanaService = new SolanaService(wallet);
+      const solanaService = new SolanaService(wallet.adapter);
       const tx = await solanaService.transferProduct(
         selectedProduct.productId,
         retailerWallet
@@ -295,8 +315,12 @@ export default function ManufacturerDashboard() {
     }
   };
 
-  if (verificationStatus !== "approved") {
-    return null;
+  if (isRedirecting) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p>Redirecting to profile...</p>
+      </div>
+    );
   }
 
   return (
@@ -515,7 +539,7 @@ export default function ManufacturerDashboard() {
                               <TableCell>{product.name}</TableCell>
                               <TableCell>{product.batchNumber}</TableCell>
                               <TableCell>
-                                {new Date(product.productionDate).toLocaleDateString()}
+                                {new Date(parseInt(product.productionDate, 10) * 1000).toLocaleDateString()}
                               </TableCell>
                               <TableCell>
                                 <Badge variant={product.status === "active" ? "default" : "secondary"}>

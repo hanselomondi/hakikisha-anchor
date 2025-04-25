@@ -1,8 +1,12 @@
 import { LogOut, Shield } from "lucide-react";
 import Link from "next/link";
-import WalletButtonClient from "./WalletMultiButton";
+// import WalletButtonClient from "./WalletMultiButton";
 import { Button } from "./ui/button";
 import { signOut } from "next-auth/react";
+
+import dynamic from "next/dynamic";
+
+const WalletButtonClient = dynamic(() => import("./WalletMultiButton"), { ssr: false });
 
 const UserNavBar = () => {
     return (

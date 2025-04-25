@@ -13,8 +13,10 @@ export default function WalletButtonClient() {
 
     return (
         <div className="hidden md:flex">
-            <WalletMultiButton className="bg-indigo-600 hover:bg-indigo-700 transition-all flex items-center gap-4 px-4">
-                <Wallet className="h-4 w-4 px-0.5" />
+            <WalletMultiButton
+                className="bg-indigo-600 hover:bg-indigo-700 transition-all flex items-center gap-4 px-4"
+                startIcon={<Wallet className="h-4 w-4 px-0.5" />}
+            >
                 {publicKey ? formatWalletAddress(publicKey.toString()) : "Connect Wallet"}
             </WalletMultiButton>
         </div>

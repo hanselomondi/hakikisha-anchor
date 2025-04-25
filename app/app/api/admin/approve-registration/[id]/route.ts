@@ -33,7 +33,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
         }
 
         // Solana interaction
-        const connection = new Connection("http://127.0.0.1:8899", "confirmed");
+        const connection = new Connection("https://api.devnet.solana.com", "confirmed");
         const adminKeyPair = getAdminKeypair();
         const adminWallet = new NodeWallet(adminKeyPair);
         const provider = new anchor.AnchorProvider(connection, adminWallet, {});

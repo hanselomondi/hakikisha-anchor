@@ -9,9 +9,16 @@ export class SolanaService {
     private program: Program;
 
     constructor(wallet: any) {
-        const connection = new Connection("http://127.0.0.1:8899", "confirmed");
+        if (!wallet || !wallet.publicKey) {
+            throw new Error("Wallet is not connected or invalid");
+        }
+        const connection = new Connection("https://api.devnet.solana.com", "confirmed");
         this.provider = new AnchorProvider(connection, wallet, { commitment: "confirmed" });
-        this.program = new Program(idl as Idl, programId, this.provider);
+        console.log("Provider initialized with wallet:", wallet.publicKey.toString());
+        this.program = new Program(
+            idl as Idl,
+            this.provider
+        );
     }
 
     async registerProduct(
@@ -71,6 +78,7 @@ export class SolanaService {
                 productAccount: productAccountPda,
                 newOwnerAccount: retailerAccountPda
             })
+            .signers([this.provider.wallet.payer!])
             .rpc();
 
         return tx;
