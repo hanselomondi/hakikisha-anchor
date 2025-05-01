@@ -14,11 +14,11 @@ const programId = new PublicKey('3bpsmdk6AE4foSTDLGpxNjb5eaYaVUaWLizyC9zouRAv');
 export async function POST(request: Request, { params }: { params: { id: string } }) {
     const session = await getServerSession(authOptions)
     if (!session || !session.user.isAdmin) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+        return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
     const { id } = await params;
-    
+
     try {
         const pendingRegistration = await db.pendingRegistration.findUnique({
             where: { id: parseInt(id) },
@@ -27,7 +27,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
         if (!pendingRegistration || pendingRegistration.status !== 'pending') {
             return NextResponse.json(
-                { error: "Pending registration not found or already processed" },
+                { message: "Pending registration not found or already processed" },
                 { status: 404 }
             );
         }
@@ -36,7 +36,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
         const connection = new Connection("https://api.devnet.solana.com", "confirmed");
         const adminKeyPair = getAdminKeypair();
         const adminWallet = new NodeWallet(adminKeyPair);
-        const provider = new anchor.AnchorProvider(connection, adminWallet, {});
+        const provider = new anchor.AnchorProvider(connection, adminWallet, { commitment: "confirmed" });
         const program = new anchor.Program(
             idl as Idl,
             provider
@@ -60,7 +60,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
                 })
                 .signers([adminKeyPair])
                 .rpc();
-            console.log("Transaction signature", tx);
+            // Confirm the transaction
+            const confirmation = await provider.connection.confirmTransaction(tx, "confirmed");
+            if (confirmation.value.err) {
+                throw new Error(`Transaction failed: ${confirmation.value.err}`);
+            }
+            console.log("Manufacturer registration transaction: ", tx);
         } else if (role === 'retailer') {
             const [retailerAccountPda] = await PublicKey.findProgramAddressSync(
                 [Buffer.from("retailer"), userPubkey.toBuffer()],
@@ -77,7 +82,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
                 })
                 .signers([adminKeyPair])
                 .rpc();
-            console.log("Transaction signature", tx);
+            // Confirm the transaction
+            const confirmation = await provider.connection.confirmTransaction(tx, "confirmed");
+            if (confirmation.value.err) {
+                throw new Error(`Transaction failed: ${confirmation.value.err}`);
+            }
+            console.log("Retailer registration transaction: ", tx);
         }
 
         // Update database
@@ -102,7 +112,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     } catch (error) {
         console.error("Error approving registration:", error);
         return NextResponse.json(
-            { error: "Error approving registration" },
+            { message: "Error approving registration" },
             { status: 500 }
         );
     }

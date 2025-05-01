@@ -14,20 +14,22 @@ datasource db {
 }
 
 model User {
-  id                  String               @id @default(uuid())
-  email               String               @unique
-  username            String               @unique
-  password            String
-  role                Role                 @default(retailer)
-  walletAddress       String?
-  businessName        String?
-  licenseNumber       String?
-  documentUrl         String?
-  verificationStatus  VerificationStatus   @default(pending)
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  pendingRegistration PendingRegistration?
-  Product             Product[]            @relation("ManufacturerProducts")
+  id                   String               @id @default(uuid())
+  email                String               @unique
+  username             String               @unique
+  password             String
+  role                 Role                 @default(retailer)
+  walletAddress        String?
+  businessName         String?
+  licenseNumber        String?
+  documentUrl          String?
+  verificationStatus   VerificationStatus   @default(pending)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  pendingRegistration  PendingRegistration?
+  Product              Product[]            @relation("ManufacturerProducts")
+  RetailerRequests     ProductRequest[]     @relation("RetailerRequests")
+  ManufacturerRequests ProductRequest[]     @relation("ManufacturerRequests")
 }
 
 model PendingRegistration {
@@ -82,6 +84,8 @@ model Product {
   manufacturerId    String
   manufacturer      User              @relation("ManufacturerProducts", fields: [manufacturerId], references: [id])
   transfers         ProductTransfer[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 }
 
 model ProductTransfer {
@@ -90,4 +94,17 @@ model ProductTransfer {
   product        Product  @relation(fields: [productId], references: [id])
   retailerWallet String
   transferDate   DateTime @default(now())
+  confirmed      Boolean  @default(false)
+}
+
+model ProductRequest {
+  id             String   @id @default(uuid())
+  retailerId     String
+  manufacturerId String
+  productName    String
+  quantity       Int
+  status         String   @default("pending") // pending, approved, rejected
+  requestDate    DateTime @default(now())
+  retailer       User     @relation("RetailerRequests", fields: [retailerId], references: [id])
+  manufacturer   User     @relation("ManufacturerRequests", fields: [manufacturerId], references: [id])
 }

@@ -54,6 +54,12 @@ export class SolanaService {
             })
             .rpc();
 
+        //  Confirm the transaction
+        const confirmation = await this.provider.connection.confirmTransaction(tx, "confirmed");
+        if (confirmation.value.err) {
+            throw new Error(`Transaction failed: ${confirmation.value.err}`);
+        }
+
         return { tx, productAccount: productAccountPda.toString() }
     }
 
@@ -71,6 +77,12 @@ export class SolanaService {
             PROGRAM_ID
         );
 
+        // Check if the retailer account exists
+        const retailerAccountInfo = await this.provider.connection.getAccountInfo(retailerAccountPda);
+        if (!retailerAccountInfo) {
+            throw new Error("Retailer account does not exist. The retailer must first initialise their account.");
+        }
+
         const tx = await this.program.methods
             .transferProduct(productId, new PublicKey(retailerWallet))
             .accounts({
@@ -78,9 +90,42 @@ export class SolanaService {
                 productAccount: productAccountPda,
                 newOwnerAccount: retailerAccountPda
             })
-            .signers([this.provider.wallet.payer!])
             .rpc();
 
+        // Confirm the transaction
+        const confirmation = await this.provider.connection.confirmTransaction(tx, "confirmed");
+        if (confirmation.value.err) {
+            throw new Error(`Transaction failed: ${confirmation.value.err.toString()}`);
+        }
+
+        return tx;
+    }
+
+    async markAsSold(productId: string) {
+        const [productAccountPda] = await PublicKey.findProgramAddressSync(
+            [Buffer.from("product"), Buffer.from(productId)],
+            PROGRAM_ID
+        );
+
+        const [retailerAccountPda] = await PublicKey.findProgramAddressSync(
+            [Buffer.from("retailer"), this.provider.wallet.publicKey.toBuffer()],
+            PROGRAM_ID
+        );
+
+        const tx = await this.program.methods
+            .markAsSold(productId)
+            .accounts({
+                retailer: this.provider.wallet.publicKey,
+                productAccount: productAccountPda,
+                retailerAccount: retailerAccountPda
+            })
+            .rpc();
+
+        // Confirm the transaction
+        const confirmation = await this.provider.connection.confirmTransaction(tx, "confirmed");
+        if (confirmation.value.err) {
+            throw new Error(`Transaction failed: ${confirmation.value.err}`);
+        }
         return tx;
     }
 }

@@ -26,6 +26,7 @@ import { useWallet } from "@solana/wallet-adapter-react"
 import { useRouter } from "next/navigation"
 import { SolanaService } from "@/lib/solanaService"
 import { PublicKey } from "@solana/web3.js"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 const WalletButtonClient = dynamic(() => import("@/components/WalletMultiButton"), { ssr: false });
 
 interface Product {
@@ -48,16 +49,30 @@ interface TransferredProduct {
   transferDate: string;
 }
 
+interface Retailer {
+  id: string;
+  businessName: string;
+  walletAddress: string;
+}
+
+interface ProductRequest {
+  id: string;
+  productName: string;
+  quantity: string;
+  retailer: string;
+  retailerEmail: string;
+  requestDate: string;
+}
+
 export default function ManufacturerDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const { publicKey, wallet, connected } = useWallet();
   const [verificationStatus, setVerificationStatus] = useState<"not_submitted" | "pending" | "approved" | "rejected" | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
-  const [activeTab, setActiveTab] = useState<"register" | "products" | "transferred">("register");
+  const [activeTab, setActiveTab] = useState<"register" | "products" | "transferred" | "requests">("register");
   const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [retailerWallet, setRetailerWallet] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [transferredProducts, setTransferredProducts] = useState<TransferredProduct[]>([]);
@@ -68,6 +83,9 @@ export default function ManufacturerDashboard() {
     name: "",
     description: "",
   });
+  const [productRequests, setProductRequests] = useState<ProductRequest[]>([]);
+  const [retailers, setRetailers] = useState<Retailer[]>([]);
+  const [selectedRetailerId, setSelectedRetailerId] = useState<string>("");
 
   // Check authentication and verification status
   useEffect(() => {
@@ -144,8 +162,42 @@ export default function ManufacturerDashboard() {
       }
     };
 
+    const fetchRetailers = async () => {
+      try {
+        const res = await fetch("/api/retailers");
+        if (res.ok) {
+          const data = await res.json();
+          setRetailers(data);
+        } else {
+          toast.error("Failed to fetch retailers");
+          console.error("Failed to fetch retailers");
+        }
+      } catch (error) {
+        toast.error("An unexpected error occurred");
+        console.error("Fetch retailers error:", error);
+      }
+    }
+
+    const fetchProductRequests = async () => {
+      try {
+        const res = await fetch("/api/manufacturer/product-requests");
+        if (res.ok) {
+          const data = await res.json();
+          setProductRequests(data);
+        } else {
+          toast.error("Failed to fetch product requests");
+          console.error("Failed to fetch product requests");
+        }
+      } catch (error) {
+        toast.error("An unexpected error occurred");
+        console.error("Fetch product requests error:", error);
+      }
+    }
+
     fetchProducts();
     fetchTransferredProducts();
+    fetchRetailers();
+    fetchProductRequests();
   }, [verificationStatus]);
 
   // Handle product form changes
@@ -257,14 +309,22 @@ export default function ManufacturerDashboard() {
       toast.error("No product selected for transfer");
       return;
     }
-    if (!retailerWallet) {
-      toast.error("Please enter a valid Solana wallet address");
+    if (!selectedRetailerId) {
+      toast.error("Please select a retailer");
       return;
     }
 
+    const selectedRetailer = retailers.find((retailer) => retailer.id === selectedRetailerId);
+    if (!selectedRetailer) {
+      toast.error("Selected retailer not found");
+      return;
+    }
+
+    const retailerWalletAddress = selectedRetailer.walletAddress;
+
     // Validate retailer wallet address
     try {
-      new PublicKey(retailerWallet);
+      new PublicKey(retailerWalletAddress);
     } catch (error) {
       toast.error("Invalid retailer wallet address");
       return;
@@ -272,25 +332,30 @@ export default function ManufacturerDashboard() {
 
     setIsLoading(true);
     try {
+      console.log("Wallet: ", wallet);
+      toast.info("Transferring product on-chain...");
       const solanaService = new SolanaService(wallet.adapter);
       const tx = await solanaService.transferProduct(
         selectedProduct.productId,
-        retailerWallet
+        retailerWalletAddress
       );
+      toast.success("Product transferred on-chain successfully");
+      console.log("Product transfer transaction:", tx);
       // Update product status in RDBMS
-      const res = await fetch("/api/manufacture/transfer-product", {
+      toast.info("Updating product status in database...");
+      const res = await fetch("/api/manufacturer/transfer-product", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           productId: selectedProduct.productId,
-          retailerWallet
+          retailerWallet: retailerWalletAddress
         }),
       });
 
       if (res.ok) {
         toast.success("Product transferred successfully");
         setIsTransferDialogOpen(false);
-        setRetailerWallet("");
+        setSelectedRetailerId("");
         setSelectedProduct(null);
         // Refresh products
         const productsRes = await fetch("/api/manufacturer/products");
@@ -305,7 +370,8 @@ export default function ManufacturerDashboard() {
         }
       } else {
         const error = await res.json();
-        toast.error(`Failed to transfer product: ${error.message}`);
+        toast.error(`Failed to update database: ${error.message}`);
+        console.error("Database update error:", error);
       }
     } catch (error) {
       toast.error("Failed to transfer product on-chain");
@@ -357,6 +423,14 @@ export default function ManufacturerDashboard() {
               <ShoppingBag className="mr-2 h-4 w-4" />
               Transferred Products
             </Button>
+            <Button
+              variant={activeTab === "requests" ? "secondary" : "ghost"}
+              className="w-full justify-start"
+              onClick={() => setActiveTab("requests")}
+            >
+              <Package className="mr-2 h-4 w-4" />
+              Product Requests
+            </Button>
           </nav>
           <div className="border-t p-4">
             <div className="flex items-center gap-3">
@@ -381,6 +455,7 @@ export default function ManufacturerDashboard() {
                   <TabsTrigger value="register">Register</TabsTrigger>
                   <TabsTrigger value="products">Products</TabsTrigger>
                   <TabsTrigger value="transferred">Transferred</TabsTrigger>
+                  <TabsTrigger value="requests">Requests</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
@@ -611,6 +686,61 @@ export default function ManufacturerDashboard() {
                 </Card>
               </div>
             )}
+
+            {/* Product Requests Tab */}
+            {activeTab === "requests" && (
+              <div>
+                <h1 className="mb-6 text-2xl font-bold text-gray-900">Product Requests</h1>
+                <Card>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Product Name</TableHead>
+                          <TableHead>Quantity</TableHead>
+                          <TableHead>Retailer</TableHead>
+                          <TableHead>Retailer Email</TableHead>
+                          <TableHead>Request Date</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {productRequests.length > 0 ? (
+                          productRequests.map((request) => (
+                            <TableRow key={request.id} className="hover:bg-gray-50">
+                              <TableCell>{request.productName}</TableCell>
+                              <TableCell>{request.quantity}</TableCell>
+                              <TableCell>{request.retailer}</TableCell>
+                              <TableCell>{request.retailerEmail}</TableCell>
+                              <TableCell>{new Date(request.requestDate).toLocaleDateString()}</TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    // Manufacturer can proceed to register and transfer the product
+                                    toast.info("Proceed to register and transfer the product to fulfill this request.");
+                                  }}
+                                  className="text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+                                >
+                                  Fulfill Request
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={6} className="h-24 text-center">
+                              No pending product requests.
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
         </main>
       </div>
@@ -621,19 +751,24 @@ export default function ManufacturerDashboard() {
           <DialogHeader>
             <DialogTitle>Transfer Product</DialogTitle>
             <DialogDescription>
-              Transfer {selectedProduct?.name} to a retailer's Solana wallet.
+              Transfer {selectedProduct?.name} to a retailer.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="retailerWallet">Retailer Wallet Address</Label>
-              <Input
-                id="retailerWallet"
-                placeholder="Enter retailer's Solana wallet address"
-                value={retailerWallet}
-                onChange={(e) => setRetailerWallet(e.target.value)}
-                required
-              />
+              <Label htmlFor="retailer">Select Retailer</Label>
+              <Select onValueChange={setSelectedRetailerId} value={selectedRetailerId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a retailer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {retailers.map((retailer) => (
+                    <SelectItem key={retailer.id} value={retailer.id}>
+                      {retailer.businessName} ({retailer.walletAddress.slice(0, 4)}...{retailer.walletAddress.slice(-4)})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>
@@ -641,7 +776,7 @@ export default function ManufacturerDashboard() {
               variant="outline"
               onClick={() => {
                 setIsTransferDialogOpen(false);
-                setRetailerWallet("");
+                setSelectedRetailerId("");
                 setSelectedProduct(null);
               }}
             >
@@ -650,7 +785,7 @@ export default function ManufacturerDashboard() {
             <Button
               onClick={handleTransfer}
               className="bg-indigo-600 hover:bg-indigo-700"
-              disabled={isLoading || !retailerWallet}
+              disabled={isLoading || !selectedRetailerId}
             >
               {isLoading ? (
                 <div className="flex items-center">

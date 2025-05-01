@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 export async function POST(request: Request) {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "manufacturer") {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     try {
@@ -17,25 +17,30 @@ export async function POST(request: Request) {
             where: { productId, manufacturerId: session.user.id, status: "active" },
         });
         if (!product) {
-            return NextResponse.json({ error: "Product not found or already transferred" }, { status: 404 });
+            return NextResponse.json({ message: "Product not found or already transferred" }, { status: 404 });
         }
 
-        const transfer = await db.productTransfer.create({
-            data: {
-                productId: product.id,
-                retailerWallet,
-                transferDate: new Date(),
-            },
-        });
+        // Atomic transaction
+        const transfer = await db.$transaction(async (database) => {
+            const transferRecord = await database.productTransfer.create({
+                data: {
+                    productId: product.id,
+                    retailerWallet,
+                    transferDate: new Date(),
+                }
+            });
 
-        await db.product.update({
-            where: { id: product.id },
-            data: { status: "transferred", owner: retailerWallet },
+            await database.product.update({
+                where: { id: product.id },
+                data: { status: "transferred", owner: retailerWallet },
+            });
+
+            return transferRecord;
         });
 
         return NextResponse.json(transfer, { status: 201 });
     } catch (error) {
         console.error("Error transferring product:", error);
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        return NextResponse.json({ message: "Internal server error" }, { status: 500 });
     }
 }

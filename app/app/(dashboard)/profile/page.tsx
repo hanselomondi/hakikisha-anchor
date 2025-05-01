@@ -10,8 +10,10 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import UserNavBar from "@/components/UserNavBar";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { useSession } from "next-auth/react";
 
 export default function ProfilePage() {
+  const { data: session, status: sessionStatus } = useSession();
   const [status, setStatus] = useState<"not_submitted" | "pending" | "approved" | "rejected">("not_submitted");
   const [isLoading, setIsLoading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -25,6 +27,12 @@ export default function ProfilePage() {
   const { publicKey } = useWallet();
 
   useEffect(() => {
+    if (sessionStatus === "loading") return; // Do nothing while loading
+    if (!session) {
+      router.push("/sign-in");
+      return;
+    }
+
     const fetchStatus = async () => {
       try {
         const res = await fetch("/api/user/registration-status");
@@ -40,7 +48,11 @@ export default function ProfilePage() {
             }
           }
           if (data.status === "approved") {
-            router.push("/manufacturer");
+            if (session.user.role === "retailer") {
+              router.push("/retailer");
+            } else if (session.user.role === "manufacturer") {
+              router.push("/manufacturer");
+            }
           }
         } else {
           toast.error("Failed to fetch registration status");
@@ -51,7 +63,7 @@ export default function ProfilePage() {
       }
     };
     fetchStatus();
-  }, [router]);
+  }, [router, session, sessionStatus]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
